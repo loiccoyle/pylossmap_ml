@@ -5,8 +5,8 @@ from typing import List, Optional, Tuple
 
 import pandas as pd
 
-from .utils import INTENSITY, timber_to_df
 from ..db import DB
+from .utils import INTENSITY, timber_to_df
 
 
 class BasePreprocessor:

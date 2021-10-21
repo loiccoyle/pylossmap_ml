@@ -3,11 +3,10 @@ from pathlib import Path
 from typing import List
 
 import pandas as pd
-from tqdm.auto import tqdm
 from pylossmap import BLMDataFetcher
+from tqdm.auto import tqdm
 
 from ..db import DB
-
 
 LOGGER = logging.getLogger(__name__)
 

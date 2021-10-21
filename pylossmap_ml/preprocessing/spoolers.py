@@ -11,7 +11,8 @@ from tqdm.auto import tqdm
 
 from .preprocessor import BasePreprocessor
 
-#TODO: add docstrings to all of these
+# TODO: add docstrings to all of these
+
 
 class BaseSpooler:
     def __init__(

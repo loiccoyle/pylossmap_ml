@@ -1,5 +1,5 @@
-from pylossmap.utils import DB
 import pytimber
+from pylossmap.utils import DB
 
 if DB is None:
     try:

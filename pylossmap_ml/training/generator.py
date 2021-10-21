@@ -2,10 +2,10 @@ import logging
 from pathlib import Path
 from typing import Tuple
 
-from tensorflow.keras.utils import Sequence
-from tqdm.auto import tqdm
 import numpy as np
 import pandas as pd
+from tensorflow.keras.utils import Sequence
+from tqdm.auto import tqdm
 
 
 class DataGenerator(Sequence):
