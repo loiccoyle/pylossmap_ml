@@ -18,11 +18,15 @@ tables = "^3.6.1"
 
 [tool.poetry.dev-dependencies]
 
+[tool.poetry.scripts]
+phomo = 'pylossmap_ml.fetching.__main__:main'
+
+
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
-[[tool.poetry.source]]
+[tool.poetry.source]
 name = "accpy"
 url = "http://acc-py-repo.cern.ch:8081/repository/vr-py-releases/simple"
 default = true
