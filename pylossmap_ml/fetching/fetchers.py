@@ -24,7 +24,7 @@ def fetch(
     if not destination_dir.is_dir():
         destination_dir.mkdir(parents=True)
     else:
-        LOGGER.warning("%s already exists.", destination_dir)
+        LOGGER.warning("'%s' already exists.", destination_dir.resolve())
 
     fetcher = BLMDataFetcher(pbar=False, BLM_var=BLM_var)
 

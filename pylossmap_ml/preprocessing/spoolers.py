@@ -22,7 +22,7 @@ class BaseSpooler:
         self.raw_files = raw_files
         self.output = output
         if self.output.exists():
-            self._log.warning("%s already exists.", self.output)
+            self._log.warning("'%s' already exists.", self.output.resolve())
 
     @abstractmethod
     def spool(self) -> None:
