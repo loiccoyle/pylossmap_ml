@@ -1,0 +1,149 @@
+import logging
+from pathlib import Path
+from typing import Tuple
+
+from tensorflow.keras.utils import Sequence
+from tqdm.auto import tqdm
+import numpy as np
+import pandas as pd
+
+
+class DataGenerator(Sequence):
+    def __init__(
+        self,
+        data_file: Path,
+        key: str = "STABLE",
+        shuffle: bool = True,
+        batch_size: int = 512,
+        seed: int = 42,
+        norm_method: str = "min_max",
+        norm_axis: int = 0,
+        norm_kwargs: dict = {},
+    ):
+        """Lossmap data hdf5 data generator.
+
+        Args:
+            data_file: path of the hdf file.
+            key: key within the hdf file.
+            shuffle: shuffle the order of the data samples within the datafile.
+            batch_size: the number of samples to load at each iteration.
+            seed: the random seed.
+            norm_method: the normalization method to use.
+            norm_axis: the normalization axis, 0 to normaliza each BLM accross
+                the entire dataset. 1 to normalize each loss map.
+            norm_kwargs: passed to the normalization method.
+        """
+        self._log = logging.getLogger(__name__)
+
+        self.data_file = data_file
+        self.key = key
+        self.shuffle = shuffle
+        self.batch_size = batch_size
+        self.seed = seed
+        self.norm_method = norm_method
+        self.norm_axis = norm_axis
+        self.norm_kwargs = norm_kwargs
+
+        norm_methods = {"min_max": self.norm_min_max}
+        self._norm_func = norm_methods[self.norm_method]
+
+        self._store = pd.HDFStore(self.data_file, "r")
+
+        self._mins_maxes = None
+        self._rng = np.random.default_rng(self.seed)
+        self._data_len = self.get_data_length()
+        self._indices = np.arange(self._data_len)
+        if self.shuffle:
+            self._log.debug("Shuffling indices, seed %s", self.seed)
+            self._rng.shuffle(self._indices)
+
+    def _compute_min_max(self) -> Tuple[np.ndarray, np.ndarray]:
+        """Compute the min and max across the entire dataset.
+
+        Returns:
+            An array of minimums and an array of maximas.
+        """
+        mins = []
+        maxes = []
+        for chunk in tqdm(
+            self._store.select(self.key, chunksize=self.batch_size, iterator=True),
+            total=self.__len__(),
+            desc=f"Computing mins & maxes, axis={self.norm_axis}",
+        ):
+
+            maxes.append(chunk.max(axis=self.norm_axis))
+            mins.append(chunk.min(axis=self.norm_axis))
+
+        return (
+            pd.concat(mins, axis=1).min(axis=1).to_numpy(),
+            pd.concat(maxes, axis=1).max(axis=1).to_numpy(),
+        )
+
+    @property
+    def mins_maxes(self) -> Tuple[np.ndarray, np.ndarray]:
+        if self._mins_maxes is None:
+            self._log.debug("Computing mins & maxes.")
+            self._mins_maxes = self._compute_min_max()
+        return self._mins_maxes
+
+    def norm_min_max(self, data: np.ndarray) -> np.ndarray:
+        """Normalize by setting the minimum to 0 and the maximum to 1.
+
+        Args:
+            data: the data to normalize.
+
+        Returns:
+            The normalized data.
+        """
+        mins, maxes = self.mins_maxes
+        self._log.debug("mins, maxes shape: %s, %s", mins.shape, maxes.shape)
+        data -= mins
+        data /= maxes - mins
+        return data
+
+    def normalize(self, data: np.ndarray) -> np.ndarray:
+        """Run the chosen normalization method.
+
+        Args:
+            data: the data to normalize.
+
+        Returns:
+            The normalized data.
+        """
+        return self._norm_func(data, **self.norm_kwargs)
+
+    def get_data_length(self) -> int:
+        """Get the length of the dataset, i.e. the number of samples in the dataset."""
+        out = self._store.get_storer(self.key).nrows
+        if out is None:
+            raise ValueError("Could not determine the dataset length. Is is empty ?")
+        return out
+
+    def _create_subset(self, index: int) -> np.ndarray:
+        """Get the indices of the subset for the provided index.
+
+        Args:
+            index: the current iteration index.
+
+        Returns:
+            The indices of the current subset.
+        """
+        indices = self._indices[
+            index
+            * self.batch_size : min((index + 1) * self.batch_size, len(self._indices))
+        ]
+        self._log.debug("Subset indices: %s", indices)
+        return indices
+
+    def __getitem__(self, index: int) -> Tuple[np.ndarray, np.ndarray]:
+        subset = self._create_subset(index)
+        subset_data = self._store.select(self.key, where=subset)
+        self._log.debug("Subset shape: %s", subset_data.shape)
+        subset_data = self.normalize(subset_data)
+        return subset_data, subset_data
+
+    def __len__(self) -> int:
+        return int(np.ceil(self._data_len / self.batch_size))
+
+    def __del__(self):
+        self._store.close()
