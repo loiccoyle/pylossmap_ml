@@ -12,9 +12,16 @@ numpy = "^1.19.0"
 tqdm = "^4.59.0"
 matplotlib = "^3.4.3"
 tensorflow = "^2.6.0"
+pytimber = "^3.2.1"
+pylossmap = {git = "https://github.com/loiccoyle/pylossmap"}
 
 [tool.poetry.dev-dependencies]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[[tool.poetry.source]]
+name = "accpy"
+url = "http://acc-py-repo.cern.ch:8081/repository/vr-py-releases/simple"
+default = true
