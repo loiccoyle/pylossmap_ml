@@ -19,7 +19,7 @@ tables = "^3.6.1"
 [tool.poetry.dev-dependencies]
 
 [tool.poetry.scripts]
-phomo = 'pylossmap_ml.fetching.__main__:main'
+lm-fetch = 'pylossmap_ml.fetching.__main__:main'
 
 
 [build-system]
