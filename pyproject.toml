@@ -14,6 +14,7 @@ matplotlib = "^3.4.3"
 tensorflow = "^2.6.0"
 pytimber = "^3.2.1"
 pylossmap = {git = "https://github.com/loiccoyle/pylossmap"}
+tables = "^3.6.1"
 
 [tool.poetry.dev-dependencies]
 
