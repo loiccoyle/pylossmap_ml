@@ -13,8 +13,8 @@ LOGGER = logging.getLogger(__name__)
 
 
 def fetch(
-    t1: pd.Datetime,
-    t2: pd.Datetime,
+    t1: pd.Timestamp,
+    t2: pd.Timestamp,
     destination_dir: Path,
     beam_modes_fills: List[str] = ["STABLE"],
     beam_modes_fetch: List[str] = ["STABLE"],
