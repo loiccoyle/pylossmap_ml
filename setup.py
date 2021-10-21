@@ -14,6 +14,8 @@ install_requires = \
 ['matplotlib>=3.4.3,<4.0.0',
  'numpy>=1.19.0,<2.0.0',
  'pandas>=1.2.3,<2.0.0',
+ 'pylossmap @ git+https://github.com/loiccoyle/pylossmap@master',
+ 'pytimber>=3.2.1,<4.0.0',
  'tensorflow>=2.6.0,<3.0.0',
  'tqdm>=4.59.0,<5.0.0']
 
