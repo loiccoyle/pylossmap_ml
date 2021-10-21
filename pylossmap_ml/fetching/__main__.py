@@ -71,7 +71,6 @@ def parse_args(args: List[str]) -> argparse.Namespace:
         action="count",
         default=0,
     )
-    parser.add_argument()
     return parser.parse_args(args)
 
 
