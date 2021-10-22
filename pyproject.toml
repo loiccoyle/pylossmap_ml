@@ -17,6 +17,7 @@ pylossmap = {git = "https://github.com/loiccoyle/pylossmap"}
 tables = "^3.6.1"
 
 [tool.poetry.dev-dependencies]
+pytest = "^6.2.5"
 
 [tool.poetry.scripts]
 lm-fetch = 'pylossmap_ml.fetching.__main__:main'
