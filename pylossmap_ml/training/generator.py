@@ -38,6 +38,7 @@ class DataGenerator(Sequence):
         norm_kwargs: dict = {},
         BLM_names: Optional[List[str]] = None,
         BLM_dcum: Optional[pd.Series] = None,
+        return_dataframe: bool = False,
     ):
         """Lossmap data hdf5 data generator.
 
@@ -66,6 +67,7 @@ class DataGenerator(Sequence):
         self.norm_kwargs = norm_kwargs
         self.BLM_names = BLM_names
         self.BLM_dcum = BLM_dcum
+        self.return_dataframe = return_dataframe
 
         norm_methods = {"min_max": self.norm_min_max}
         self._norm_func = norm_methods[self.norm_method]
@@ -203,6 +205,7 @@ class DataGenerator(Sequence):
             norm_kwargs=self.norm_kwargs,
             BLM_names=self.BLM_names,
             BLM_dcum=self.BLM_dcum,
+            return_dataframe=self.return_dataframe,
         )
 
     def to_json(self) -> str:
@@ -217,10 +220,16 @@ class DataGenerator(Sequence):
         subset_data = self._store.select(self.key, where=subset)
         self._log.debug("Subset shape: %s", subset_data.shape)
         subset_data = self.normalize(subset_data)
+
         if self.BLM_names is not None:
             self._log.info("Assigning BLM names.")
             subset_data.columns = self.BLM_names
         subset_data = self.reorder_blms(subset_data)
+
+        if not self.return_dataframe:
+            self._log.info("Converting to numpy array.")
+            subset_data = subset_data.to_numpy()
+
         return subset_data, subset_data
 
     def __len__(self) -> int:
