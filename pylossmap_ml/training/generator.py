@@ -76,8 +76,7 @@ class DataGenerator(Sequence):
         norm_methods = {"min_max": self.norm_min_max}
         self._norm_func = norm_methods[self.norm_method]
 
-        self._store = pd.HDFStore(self.data_file, "r")
-
+        self._store = None
         self._mins_maxes = None
         self._blm_sorted = None
         self._rng = np.random.default_rng(self.seed)
@@ -96,7 +95,7 @@ class DataGenerator(Sequence):
         mins = []
         maxes = []
         for chunk in tqdm(
-            self._store.select(self.key, chunksize=self.batch_size, iterator=True),
+            self.store.select(self.key, chunksize=self.batch_size, iterator=True),
             total=self.__len__(),
             desc=f"Computing mins & maxes, axis={self.norm_axis}",
         ):
@@ -108,6 +107,12 @@ class DataGenerator(Sequence):
             pd.concat(mins, axis=1).min(axis=1).to_numpy(),
             pd.concat(maxes, axis=1).max(axis=1).to_numpy(),
         )
+
+    @property
+    def store(self) -> pd.HDFStore:
+        if self._store is None:
+            self._store = pd.HDFStore(self.data_file, "r")
+        return self._store
 
     @property
     def mins_maxes(self) -> Tuple[np.ndarray, np.ndarray]:
@@ -151,7 +156,7 @@ class DataGenerator(Sequence):
         Raises:
             ValueError: when the number of rows could not be determined.
         """
-        out = self._store.get_storer(self.key).nrows
+        out = self.store.get_storer(self.key).nrows
         if out is None:
             raise ValueError("Could not determine the dataset length. Is is empty ?")
         return out
@@ -222,7 +227,7 @@ class DataGenerator(Sequence):
 
     def __getitem__(self, index: int) -> Tuple[np.ndarray, np.ndarray]:
         subset = self._create_subset(index)
-        subset_data = self._store.select(self.key, where=subset)
+        subset_data = self.store.select(self.key, where=subset)
         self._log.debug("Subset shape: %s", subset_data.shape)
         subset_data = self.normalize(subset_data)
 
@@ -244,4 +249,5 @@ class DataGenerator(Sequence):
         return int(np.ceil(self._data_len / self.batch_size))
 
     def __del__(self):
-        self._store.close()
+        if self._store is not None:
+            self._store.close()
