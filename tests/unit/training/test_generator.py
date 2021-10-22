@@ -1,6 +1,7 @@
 import json
 from unittest import TestCase
 from pathlib import Path
+from shutil import rmtree
 
 import pandas as pd
 
@@ -23,7 +24,11 @@ class TestDataGenerator(TestCase):
             batch_size=256,
             BLM_dcum=cls.blm_dcum,  # type: ignore
             BLM_names=cls.blm_names,
+            return_dataframe=True,
         )
+        cls.test_dir = Path("test_generator")
+        if not cls.test_dir.is_dir():
+            cls.test_dir.mkdir(parents=True)
 
     def test_init(self):
         generator = DataGenerator(
@@ -36,3 +41,14 @@ class TestDataGenerator(TestCase):
 
     def test_len(self):
         assert len(self.generator) == 1024 / 256
+
+    def test_to_json(self):
+        json_file = self.test_dir / "generator_params.json"
+        json_string = self.generator.to_json(json_file)
+        assert DataGenerator.from_json(json_file).to_json() == json_string
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        # clean closing of open files.
+        del cls.generator
+        rmtree(cls.test_dir)
