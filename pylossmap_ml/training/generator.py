@@ -31,7 +31,7 @@ class DataGenerator(Sequence):
         data_file: Path,
         key: str = "STABLE",
         shuffle: bool = True,
-        batch_size: int = 512,
+        batch_size: int = 1024,
         seed: int = 42,
         norm_method: str = "min_max",
         norm_axis: int = 0,
@@ -125,7 +125,7 @@ class DataGenerator(Sequence):
         """Normalize by setting the minimum to 0 and the maximum to 1.
 
         Args:
-            data: the data to normalize.
+            data: The data to normalize.
 
         Returns:
             The normalized data.
