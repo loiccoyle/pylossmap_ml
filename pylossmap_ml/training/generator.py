@@ -203,7 +203,7 @@ class DataGenerator(Sequence):
         param_dict = self.to_dict()
         param_dict["data_file"] = str(param_dict["data_file"])
         param_dict["BLM_dcum"] = param_dict["BLM_dcum"].to_dict()
-        return json.dumps(param_dict)
+        return json.dumps(param_dict, indent=2)
 
     def __getitem__(self, index: int) -> Tuple[np.ndarray, np.ndarray]:
         subset = self._create_subset(index)
