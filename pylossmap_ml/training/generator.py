@@ -218,12 +218,23 @@ class DataGenerator(Sequence):
             ndims=self.ndims,
         )
 
-    def to_json(self) -> str:
-        """Return a serialized json string of the arguments of the current instance."""
+    def to_json(self, file_path: Optional[Path] = None) -> str:
+        """Return a serialized json string of the arguments of the current instance.
+
+        Args:
+            file_path: if provided, will also write the json string to file.
+
+        Returns:
+            The json string.
+        """
+        dump_kwargs = {"indent": 2}
         param_dict = self.to_dict()
         param_dict["data_file"] = str(param_dict["data_file"])
         param_dict["BLM_dcum"] = param_dict["BLM_dcum"].to_dict()
-        return json.dumps(param_dict, indent=2)
+        if file_path is not None:
+            with open(file_path, "w") as fp:
+                json.dump(param_dict, fp, **dump_kwargs)
+        return json.dumps(param_dict, **dump_kwargs)
 
     def __getitem__(self, index: int) -> Tuple[np.ndarray, np.ndarray]:
         subset = self._create_subset(index)
