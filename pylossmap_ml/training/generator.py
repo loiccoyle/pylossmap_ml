@@ -235,8 +235,9 @@ class DataGenerator(Sequence):
             self._log.info("Converting to numpy array.")
             subset_data = subset_data.to_numpy()
             # Expand the number of dimensions in the subset array
-            for _ in range(max(subset_data.dims - self.ndims, 0)):
-                subset_data = subset_data[..., np.newaxis]
+            n_expand = max(self.ndims - subset_data.ndims, 0)
+            if n_expand > 0:
+                subset_data = subset_data[(..., *([np.newaxis] * n_expand))]
         return subset_data, subset_data
 
     def __len__(self) -> int:
