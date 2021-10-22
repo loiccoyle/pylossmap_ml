@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import Tuple
+from typing import List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -19,6 +19,7 @@ class DataGenerator(Sequence):
         norm_method: str = "min_max",
         norm_axis: int = 0,
         norm_kwargs: dict = {},
+        BLM_dcum: Optional[pd.Series] = None,
     ):
         """Lossmap data hdf5 data generator.
 
@@ -32,6 +33,7 @@ class DataGenerator(Sequence):
             norm_axis: the normalization axis, 0 to normaliza each BLM accross
                 the entire dataset. 1 to normalize each loss map.
             norm_kwargs: passed to the normalization method.
+            BLM_dcum: BLM position data.
         """
         self._log = logging.getLogger(__name__)
 
@@ -43,6 +45,7 @@ class DataGenerator(Sequence):
         self.norm_method = norm_method
         self.norm_axis = norm_axis
         self.norm_kwargs = norm_kwargs
+        self.BLM_dcum = BLM_dcum
 
         norm_methods = {"min_max": self.norm_min_max}
         self._norm_func = norm_methods[self.norm_method]
@@ -53,6 +56,7 @@ class DataGenerator(Sequence):
         self._rng = np.random.default_rng(self.seed)
         self._data_len = self.get_data_length()
         self._indices = np.arange(self._data_len)
+        self._blm_sorted = None
         if self.shuffle:
             self._log.debug("Shuffling indices, seed %s", self.seed)
             self._rng.shuffle(self._indices)
@@ -119,6 +123,17 @@ class DataGenerator(Sequence):
             raise ValueError("Could not determine the dataset length. Is is empty ?")
         return out
 
+    def reorder_blms(self, data: pd.DataFrame) -> pd.DataFrame:
+        if self.BLM_dcum is not None:
+            if self._blm_sorted is None:
+                self._blms_sorted = (
+                    self.BLM_dcum.loc[data.columns.to_list()]
+                    .sort_values()
+                    .index.to_list()
+                )
+            return data[self._blms_sorted]
+        return data
+
     def _create_subset(self, index: int) -> np.ndarray:
         """Get the indices of the subset for the provided index.
 
@@ -140,6 +155,7 @@ class DataGenerator(Sequence):
         subset_data = self._store.select(self.key, where=subset)
         self._log.debug("Subset shape: %s", subset_data.shape)
         subset_data = self.normalize(subset_data)
+        subset_data = self.reorder_blms(subset_data)
         return subset_data, subset_data
 
     def __len__(self) -> int:

@@ -1,7 +1,7 @@
+import json
 import logging
 from pathlib import Path
 from typing import List
-import json
 
 import pandas as pd
 from pylossmap import BLMDataFetcher
