@@ -11,7 +11,7 @@ from tqdm.auto import tqdm
 
 class DataGenerator(Sequence):
     @classmethod
-    def from_dict(cls, parameter_file: Path) -> "DataGenerator":
+    def from_json(cls, parameter_file: Path) -> "DataGenerator":
         """Read"""
         with open(parameter_file, "r") as fp:
             param_dict = json.load(fp)
