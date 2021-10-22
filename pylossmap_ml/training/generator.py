@@ -1,3 +1,4 @@
+import json
 import logging
 from pathlib import Path
 from typing import List, Optional, Tuple
@@ -9,6 +10,15 @@ from tqdm.auto import tqdm
 
 
 class DataGenerator(Sequence):
+    @classmethod
+    def from_dict(cls, parameter_file: Path) -> "DataGenerator":
+        """Read"""
+        with open(parameter_file, "r") as fp:
+            param_dict = json.load(fp)
+        param_dict["data_file"] = Path(param_dict["data_file"])
+        param_dict["BLM_dcum"] = pd.Series(param_dict["BLM_dcum"])
+        return cls(**param_dict)
+
     def __init__(
         self,
         data_file: Path,
@@ -187,6 +197,13 @@ class DataGenerator(Sequence):
             BLM_names=self.BLM_names,
             BLM_dcum=self.BLM_dcum,
         )
+
+    def to_json(self) -> str:
+        """Return a serialized json string of the arguments of the current instance."""
+        param_dict = self.to_dict()
+        param_dict["data_file"] = str(param_dict["data_file"])
+        param_dict["BLM_dcum"] = param_dict["BLM_dcum"].to_dict()
+        return json.dumps(param_dict)
 
     def __getitem__(self, index: int) -> Tuple[np.ndarray, np.ndarray]:
         subset = self._create_subset(index)
