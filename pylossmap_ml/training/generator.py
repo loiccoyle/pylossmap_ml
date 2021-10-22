@@ -56,10 +56,10 @@ class DataGenerator(Sequence):
         self._store = pd.HDFStore(self.data_file, "r")
 
         self._mins_maxes = None
+        self._blm_sorted = None
         self._rng = np.random.default_rng(self.seed)
         self._data_len = self.get_data_length()
         self._indices = np.arange(self._data_len)
-        self._blm_sorted = None
         if self.shuffle:
             self._log.debug("Shuffling indices, seed %s", self.seed)
             self._rng.shuffle(self._indices)
@@ -68,7 +68,7 @@ class DataGenerator(Sequence):
         """Compute the min and max across the entire dataset.
 
         Returns:
-            An array of minimums and an array of maximas.
+            An array of minimas and an array of maximas.
         """
         mins = []
         maxes = []
@@ -120,7 +120,14 @@ class DataGenerator(Sequence):
         return self._norm_func(data, **self.norm_kwargs)
 
     def get_data_length(self) -> int:
-        """Get the length of the dataset, i.e. the number of samples in the dataset."""
+        """Get the length of the dataset, i.e. the number of samples in the dataset.
+
+        Returns:
+            The number of rows in the dataset
+
+        Raises:
+            ValueError: when the number of rows could not be determined.
+        """
         out = self._store.get_storer(self.key).nrows
         if out is None:
             raise ValueError("Could not determine the dataset length. Is is empty ?")
@@ -164,6 +171,11 @@ class DataGenerator(Sequence):
         return indices
 
     def to_dict(self) -> dict:
+        """Return a dictionary with the arguments of the current instance.
+
+        Returns:
+            Dictionary with the arguments of the current instance.
+        """
         return dict(
             data_file=self.data_file,
             key=self.key,
