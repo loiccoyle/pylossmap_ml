@@ -54,8 +54,8 @@ def fetch(
     LOGGER.info("Found %i fills.", len(fills))
     save_dataset_info(
         destination_dir / ".dataset_info.json",
-        t1=t1,
-        t2=t2,
+        t1=str(t1),
+        t2=str(t2),
         destination_dir=destination_dir,
         beam_modes_fills=beam_modes_fills,
         beam_modes_fetch=beam_modes_fetch,
