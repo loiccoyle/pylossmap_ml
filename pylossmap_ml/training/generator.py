@@ -39,7 +39,7 @@ class DataGenerator(Sequence):
         BLM_names: Optional[List[str]] = None,
         BLM_dcum: Optional[pd.Series] = None,
         return_dataframe: bool = False,
-        ndims: int = 3,
+        ndim: int = 3,
     ):
         """Lossmap data hdf5 data generator.
 
@@ -56,7 +56,7 @@ class DataGenerator(Sequence):
             BLM_names: The names of the BLM columns in the `data_file`.
             BLM_dcum: BLM position data.
             return_dataframe: Return `pd.DataFrame`s.
-            ndims: expand the number of dimension in the numpy array.
+            ndim: expand the number of dimension in the numpy array.
         """
         self._log = logging.getLogger(__name__)
 
@@ -71,7 +71,7 @@ class DataGenerator(Sequence):
         self.BLM_names = BLM_names
         self.BLM_dcum = BLM_dcum
         self.return_dataframe = return_dataframe
-        self.ndims = ndims
+        self.ndim = ndim
 
         norm_methods = {"min_max": self.norm_min_max}
         self._norm_func = norm_methods[self.norm_method]
@@ -215,7 +215,7 @@ class DataGenerator(Sequence):
             BLM_names=self.BLM_names,
             BLM_dcum=self.BLM_dcum,
             return_dataframe=self.return_dataframe,
-            ndims=self.ndims,
+            ndim=self.ndim,
         )
 
     def to_json(self, file_path: Optional[Path] = None) -> str:
@@ -251,7 +251,7 @@ class DataGenerator(Sequence):
             self._log.info("Converting to numpy array.")
             subset_data = subset_data.to_numpy()
             # Expand the number of dimensions in the subset array
-            n_expand = max(self.ndims - subset_data.ndims, 0)
+            n_expand = max(self.ndim - subset_data.ndim, 0)
             if n_expand > 0:
                 self._log.info("Expanding the dimensions by: %i", n_expand)
                 subset_data = subset_data[(..., *([np.newaxis] * n_expand))]
