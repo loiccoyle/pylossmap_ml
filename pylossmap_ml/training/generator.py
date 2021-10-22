@@ -167,7 +167,6 @@ class DataGenerator(Sequence):
             index
             * self.batch_size : min((index + 1) * self.batch_size, len(self._indices))
         ]
-        self._log.debug("Subset indices: %s", indices)
         return indices
 
     def to_dict(self) -> dict:
