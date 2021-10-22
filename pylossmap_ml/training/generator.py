@@ -253,6 +253,7 @@ class DataGenerator(Sequence):
             # Expand the number of dimensions in the subset array
             n_expand = max(self.ndims - subset_data.ndims, 0)
             if n_expand > 0:
+                self._log.info("Expanding the dimensions by: %i", n_expand)
                 subset_data = subset_data[(..., *([np.newaxis] * n_expand))]
         return subset_data, subset_data
 
