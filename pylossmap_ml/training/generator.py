@@ -10,7 +10,6 @@ from tqdm.auto import tqdm
 
 
 class DataGenerator(Sequence):
-
     @classmethod
     def from_json(cls, parameter_file: Path) -> "DataGenerator":
         """Create a DataGenerator instance from a json file.
