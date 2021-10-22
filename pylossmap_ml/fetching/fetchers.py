@@ -21,7 +21,7 @@ def save_dataset_info(file_path: Path, **kwargs) -> None:
     """
     LOGGER.info("Saving dataset info to: %s", file_path)
     with open(file_path, "w") as file:
-        json.dump(kwargs, file)
+        json.dump(kwargs, file, indent=2)
 
 
 def fetch(
