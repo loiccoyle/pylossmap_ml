@@ -81,6 +81,7 @@ def main() -> None:
         verbose_map = {1: logging.INFO, 2: logging.DEBUG}
         level = verbose_map[args.verbose]
         # from https://docs.python.org/3/howto/logging.html#configuring-logging
+        LOGGER.handlers.clear()
         LOGGER.setLevel(level)
         # create console handler and set level to debug
         handler = logging.StreamHandler()
