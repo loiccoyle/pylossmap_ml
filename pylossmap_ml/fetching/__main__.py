@@ -98,7 +98,7 @@ def main() -> None:
     if args.preconfigured is not None:
         fetch_method = PRECONFIGURED_MAP[args.preconfigured]
         LOGGER.info("Using method: %s", fetch_method)
-        fetch_method(args.destination_dir, args.BLM_var)
+        fetch_method(args.destination_dir, BLM_var=args.BLM_var)
     else:
         if args.start is None:
             raise argparse.ArgumentTypeError("No --start time provided.")
