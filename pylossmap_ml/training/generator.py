@@ -126,11 +126,13 @@ class DataGenerator(Sequence):
     def reorder_blms(self, data: pd.DataFrame) -> pd.DataFrame:
         if self.BLM_dcum is not None:
             if self._blm_sorted is None:
+                self._log.debug("Computing blm_sorted.")
                 self._blms_sorted = (
                     self.BLM_dcum.loc[data.columns.to_list()]
                     .sort_values()
                     .index.to_list()
                 )
+            self._log.info("Reordering BLMs.")
             return data[self._blms_sorted]
         return data
 
