@@ -80,20 +80,7 @@ def main() -> None:
     if args.verbose > 0:
         verbose_map = {1: logging.INFO, 2: logging.DEBUG}
         level = verbose_map[args.verbose]
-        # from https://docs.python.org/3/howto/logging.html#configuring-logging
-        LOGGER.handlers.clear()
         LOGGER.setLevel(level)
-        # create console handler and set level to debug
-        handler = logging.StreamHandler()
-        handler.setLevel(level)
-        # create formatter
-        formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
-        # add formatter to handler
-        handler.setFormatter(formatter)
-        # add ch to LOGGER
-        LOGGER.addHandler(handler)
 
     LOGGER.debug("Args: %s", args)
     if args.preconfigured is not None:
