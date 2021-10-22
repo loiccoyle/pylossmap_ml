@@ -19,6 +19,7 @@ class DataGenerator(Sequence):
         norm_method: str = "min_max",
         norm_axis: int = 0,
         norm_kwargs: dict = {},
+        BLM_names: Optional[List[str]] = None,
         BLM_dcum: Optional[pd.Series] = None,
     ):
         """Lossmap data hdf5 data generator.
@@ -33,6 +34,7 @@ class DataGenerator(Sequence):
             norm_axis: the normalization axis, 0 to normaliza each BLM accross
                 the entire dataset. 1 to normalize each loss map.
             norm_kwargs: passed to the normalization method.
+            BLM_names: The names of the BLM columns in the `data_file`.
             BLM_dcum: BLM position data.
         """
         self._log = logging.getLogger(__name__)
@@ -45,6 +47,7 @@ class DataGenerator(Sequence):
         self.norm_method = norm_method
         self.norm_axis = norm_axis
         self.norm_kwargs = norm_kwargs
+        self.BLM_names = BLM_names
         self.BLM_dcum = BLM_dcum
 
         norm_methods = {"min_max": self.norm_min_max}
@@ -130,7 +133,7 @@ class DataGenerator(Sequence):
             data: Data for which to reorder the BLMs.
 
         Returns:
-            The data with columnd sorted by dcum.
+            The data with columns sorted by dcum.
         """
         if self.BLM_dcum is not None:
             if self._blm_sorted is None:
@@ -160,11 +163,28 @@ class DataGenerator(Sequence):
         self._log.debug("Subset indices: %s", indices)
         return indices
 
+    def to_dict(self) -> dict:
+        return dict(
+            data_file=self.data_file,
+            key=self.key,
+            shuffle=self.shuffle,
+            batch_size=self.batch_size,
+            seed=self.seed,
+            norm_method=self.norm_method,
+            norm_axis=self.norm_axis,
+            norm_kwargs=self.norm_kwargs,
+            BLM_names=self.BLM_names,
+            BLM_dcum=self.BLM_dcum,
+        )
+
     def __getitem__(self, index: int) -> Tuple[np.ndarray, np.ndarray]:
         subset = self._create_subset(index)
         subset_data = self._store.select(self.key, where=subset)
         self._log.debug("Subset shape: %s", subset_data.shape)
         subset_data = self.normalize(subset_data)
+        if self.BLM_names is not None:
+            self._log.info("Assigning BLM names.")
+            subset_data.columns = self.BLM_names
         subset_data = self.reorder_blms(subset_data)
         return subset_data, subset_data
 
