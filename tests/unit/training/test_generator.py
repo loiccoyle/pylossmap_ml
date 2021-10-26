@@ -86,6 +86,10 @@ class TestDataGenerator(TestCase):
         self.generator_npy.to_dict()
         self.generator_pd.to_dict()
 
+    def test_get_metadata(self):
+        index = self.generator_npy.get_metadata()
+        assert len(index) == self.generator_npy._data_len
+
     def tearDown(self) -> None:
         # clean closing of open files.
         del self.generator_pd

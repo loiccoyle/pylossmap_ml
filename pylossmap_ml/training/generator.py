@@ -9,6 +9,9 @@ from tensorflow.keras.utils import Sequence
 from tqdm.auto import tqdm
 
 
+# TODO: add some sort of way of creating a Validation generator
+
+
 class DataGenerator(Sequence):
     @classmethod
     def from_json(cls, parameter_file: Path) -> "DataGenerator":
@@ -111,6 +114,7 @@ class DataGenerator(Sequence):
     @property
     def store(self) -> pd.HDFStore:
         if self._store is None:
+            self._log.debug("Opening hdf file.")
             self._store = pd.HDFStore(self.data_file, "r")
         return self._store
 
@@ -120,6 +124,20 @@ class DataGenerator(Sequence):
             self._log.debug("Computing mins & maxes.")
             self._mins_maxes = self._compute_min_max()
         return self._mins_maxes
+
+    def get_metadata(self, **kwargs) -> np.ndarray:
+        """Read the index of the data file.
+
+        Args:
+            **kwargs: passed to the `pd.HDFStore.select` method.
+        """
+        chunks = [
+            chunk.index.to_numpy()
+            for chunk in self.store.select(
+                self.key, columns=[0], chunksize=min(int(1e6), self._data_len), **kwargs
+            )
+        ]
+        return np.hstack(chunks)
 
     def norm_min_max(self, data: np.ndarray) -> np.ndarray:
         """Normalize by setting the minimum to 0 and the maximum to 1.
