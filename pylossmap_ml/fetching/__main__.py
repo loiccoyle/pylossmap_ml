@@ -59,7 +59,7 @@ def parse_args(args: List[str]) -> argparse.Namespace:
         help="Fetch data of the provided beam modes.",
     )
     parser.add_argument(
-        "--BLM_var",
+        "--blm-var",
         type=str,
         default="LHC.BLMI:LOSS_RS01",
         help="The timber BLM data variable.",
@@ -86,7 +86,7 @@ def main() -> None:
     if args.preconfigured is not None:
         fetch_method = PRECONFIGURED_MAP[args.preconfigured]
         LOGGER.info("Using method: %s", fetch_method)
-        fetch_method(args.destination_dir, BLM_var=args.BLM_var)
+        fetch_method(args.destination_dir, BLM_var=args.blm_var)
     else:
         if args.start is None:
             raise argparse.ArgumentTypeError("No --start time provided.")
