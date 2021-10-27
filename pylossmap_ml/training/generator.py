@@ -27,6 +27,8 @@ class DataGenerator(Sequence):
             param_dict = json.load(fp)
         param_dict["data_file"] = Path(param_dict["data_file"])
         param_dict["BLM_dcum"] = pd.Series(param_dict["BLM_dcum"])
+        if param_dict["indices"] is not None:
+            param_dict["indices"] = np.array(param_dict["indices"])
         return cls(**param_dict)
 
     def __init__(
@@ -43,13 +45,15 @@ class DataGenerator(Sequence):
         BLM_dcum: Optional[pd.Series] = None,
         return_dataframe: bool = False,
         ndim: int = 3,
+        indices: Optional[np.ndarray] = None,
     ):
         """Lossmap data hdf5 data generator.
 
         Args:
             data_file: path of the hdf file.
             key: key within the hdf file.
-            shuffle: shuffle the order of the data samples within the datafile.
+            shuffle: shuffle the order of the data samples within the datafile,
+                this is ignored if `indices` is provided.
             batch_size: the number of samples to load at each iteration.
             seed: the random seed.
             norm_method: the normalization method to use.
@@ -60,14 +64,17 @@ class DataGenerator(Sequence):
             BLM_dcum: BLM position data.
             return_dataframe: Return `pd.DataFrame`s.
             ndim: expand the number of dimension in the numpy array.
+            indices: the indices of the samples to load from the data file.
         """
         self._log = logging.getLogger(__name__)
 
         self.data_file = data_file
+        self._store = None
         self.key = key
         self.shuffle = shuffle
         self.batch_size = batch_size
         self.seed = seed
+        self._rng = np.random.default_rng(self.seed)
         self.norm_method = norm_method
         self.norm_axis = norm_axis
         self.norm_kwargs = norm_kwargs
@@ -75,19 +82,20 @@ class DataGenerator(Sequence):
         self.BLM_dcum = BLM_dcum
         self.return_dataframe = return_dataframe
         self.ndim = ndim
+        self._data_len = self.get_data_length()
+        if indices is None:
+            self._log.debug("Creating indices.")
+            indices = np.arange(self._data_len)
+            if self.shuffle:
+                self._log.debug("Shuffling indices, seed %s", self.seed)
+                self._rng.shuffle(indices)
+        self.indices = indices  # type: np.ndarray
 
-        norm_methods = {"min_max": self.norm_min_max}
-        self._norm_func = norm_methods[self.norm_method]
-
-        self._store = None
         self._mins_maxes = None
         self._blm_sorted = None
-        self._rng = np.random.default_rng(self.seed)
-        self._data_len = self.get_data_length()
-        self._indices = np.arange(self._data_len)
-        if self.shuffle:
-            self._log.debug("Shuffling indices, seed %s", self.seed)
-            self._rng.shuffle(self._indices)
+        # self._indices = np.arange(self._data_len)
+        norm_methods = {"min_max": self.norm_min_max}
+        self._norm_func = norm_methods[self.norm_method]
 
     def _compute_min_max(self) -> Tuple[np.ndarray, np.ndarray]:
         """Compute the min and max across the entire dataset.
@@ -125,11 +133,43 @@ class DataGenerator(Sequence):
             self._mins_maxes = self._compute_min_max()
         return self._mins_maxes
 
-    def get_metadata(self, **kwargs) -> np.ndarray:
+    def split(self, ratio: float) -> Tuple["DataGenerator", "DataGenerator"]:
+        """Split the generator without overlapping data samples.
+
+        Args:
+            ratio: split ratio.
+
+        Returns:
+            The 2 DataGenerator instances, the first will generate `ratio`% of
+                the data. The second (1 - `ratio`)% of the data.
+        """
+        self._log.debug("Splitting dataset.")
+        n_samples = int(ratio * len(self.indices))
+        self._log.debug("Split n_samples: %i", n_samples)
+        split_indices_index = self._rng.choice(
+            np.arange(len(self.indices)), n_samples, replace=False
+        )
+        split_indices = self.indices[split_indices_index]
+        remaining_indices = np.delete(self.indices, split_indices_index)
+        self._log.debug("Split size: %s", split_indices.shape)
+        self._log.debug("Split remaining size: %s", remaining_indices.shape)
+
+        split_params = self.to_dict()
+        split_params["indices"] = split_indices
+        remaining_params = self.to_dict()
+        remaining_params["indices"] = remaining_indices
+        return DataGenerator(**split_params), DataGenerator(**remaining_params)
+
+    def get_metadata(self, entire_data_file: bool = False, **kwargs) -> np.ndarray:
         """Read the index of the data file.
 
         Args:
+            entire_data_file: return the metadata of the entire dataset or just
+                of the indices concerned by the generator.
             **kwargs: passed to the `pd.HDFStore.select` method.
+
+        Returns:
+            A numpy array containing the metadata of the dataset.
         """
         chunks = [
             chunk.index.to_numpy()
@@ -137,7 +177,10 @@ class DataGenerator(Sequence):
                 self.key, columns=[0], chunksize=min(int(1e6), self._data_len), **kwargs
             )
         ]
-        return np.hstack(chunks)
+        chunks = np.hstack(chunks)
+        if not entire_data_file:
+            chunks = chunks[self.indices]
+        return chunks
 
     def norm_min_max(self, data: np.ndarray) -> np.ndarray:
         """Normalize by setting the minimum to 0 and the maximum to 1.
@@ -209,9 +252,9 @@ class DataGenerator(Sequence):
         Returns:
             The indices of the current subset.
         """
-        indices = self._indices[
+        indices = self.indices[
             index
-            * self.batch_size : min((index + 1) * self.batch_size, len(self._indices))
+            * self.batch_size : min((index + 1) * self.batch_size, len(self.indices))
         ]
         return indices
 
@@ -234,6 +277,7 @@ class DataGenerator(Sequence):
             BLM_dcum=self.BLM_dcum,
             return_dataframe=self.return_dataframe,
             ndim=self.ndim,
+            indices=self.indices,
         )
 
     def to_json(self, file_path: Optional[Path] = None) -> str:
@@ -249,6 +293,8 @@ class DataGenerator(Sequence):
         param_dict = self.to_dict()
         param_dict["data_file"] = str(param_dict["data_file"])
         param_dict["BLM_dcum"] = param_dict["BLM_dcum"].to_dict()
+        if param_dict["indices"] is not None:
+            param_dict["indices"] = param_dict["indices"].tolist()
         if file_path is not None:
             with open(file_path, "w") as fp:
                 json.dump(param_dict, fp, **dump_kwargs)
@@ -276,7 +322,7 @@ class DataGenerator(Sequence):
         return subset_data, subset_data
 
     def __len__(self) -> int:
-        return int(np.ceil(self._data_len / self.batch_size))
+        return int(np.ceil(len(self.indices) / self.batch_size))
 
     def __del__(self):
         if self._store is not None:

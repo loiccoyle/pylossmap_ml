@@ -90,6 +90,16 @@ class TestDataGenerator(TestCase):
         index = self.generator_npy.get_metadata()
         assert len(index) == self.generator_npy._data_len
 
+    def test_split(self):
+        ratio = 0.25
+        generator_1, generator_2 = self.generator_npy.split(ratio)
+        assert len(generator_1.indices) == int(len(self.generator_npy.indices) * ratio)
+        assert len(generator_2.indices) == int(
+            len(self.generator_npy.indices) * (1 - ratio)
+        )
+        # make sure there are no common data samples
+        assert set(generator_1.indices) & set(generator_2.indices) == set()
+
     def tearDown(self) -> None:
         # clean closing of open files.
         del self.generator_pd
