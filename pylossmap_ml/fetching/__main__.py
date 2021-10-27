@@ -23,7 +23,8 @@ PRECONFIGURED_MAP = {
 
 def parse_args(args: List[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        description="Fetch a BLM dataset.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
         "destination_dir",
@@ -99,7 +100,7 @@ def main() -> None:
             args.start.tz_localize("Europe/Zurich"),
             args.stop.tz_localize("Europe/Zurich"),
             args.destination_dir,
-            args.beam_modes_fills,
-            args.beam_modes_fetch,
-            args.BLM_var,
+            beam_modes_fills=args.beam_modes_fills,
+            beam_modes_fetch=args.beam_modes_fetch,
+            BLM_var=args.blm_var,
         )
