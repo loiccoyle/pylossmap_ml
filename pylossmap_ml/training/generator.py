@@ -9,9 +9,6 @@ from tensorflow.keras.utils import Sequence
 from tqdm.auto import tqdm
 
 
-# TODO: add some sort of way of creating a Validation generator
-
-
 class DataGenerator(Sequence):
     @classmethod
     def from_json(cls, parameter_file: Path) -> "DataGenerator":
@@ -135,6 +132,8 @@ class DataGenerator(Sequence):
 
     def split(self, ratio: float) -> Tuple["DataGenerator", "DataGenerator"]:
         """Split the generator without overlapping data samples.
+
+        Useful for creating a training and validation generator.
 
         Args:
             ratio: split ratio.
