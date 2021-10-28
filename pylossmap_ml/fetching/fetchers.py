@@ -81,9 +81,11 @@ def fetch(
             )
 
 
+# 2018 schedule:
+# https://beams.cern/sites/beams.web.cern.ch/files/schedules/LHC_Schedule_2018.pdf
 def fetch_ion_stable(destination_dir: Path, **kwargs) -> None:
-    t1 = pd.to_datetime("2018-09-01 00:00:00").tz_localize("Europe/Zurich")
-    t2 = pd.to_datetime("2018-12-31 00:00:00").tz_localize("Europe/Zurich")
+    t1 = pd.to_datetime("2018-11-08 00:00:00").tz_localize("Europe/Zurich")
+    t2 = pd.to_datetime("2018-12-04 00:00:00").tz_localize("Europe/Zurich")
     return fetch(
         t1,
         t2,
@@ -95,8 +97,8 @@ def fetch_ion_stable(destination_dir: Path, **kwargs) -> None:
 
 
 def fetch_proton_stable(destination_dir: Path, **kwargs) -> None:
-    t1 = pd.to_datetime("2018-05-01 00:00:00").tz_localize("Europe/Zurich")
-    t2 = pd.to_datetime("2018-08-31 00:00:00").tz_localize("Europe/Zurich")
+    t1 = pd.to_datetime("2018-05-05 00:00:00").tz_localize("Europe/Zurich")
+    t2 = pd.to_datetime("2018-10-24 00:00:00").tz_localize("Europe/Zurich")
     return fetch(
         t1,
         t2,
@@ -108,8 +110,8 @@ def fetch_proton_stable(destination_dir: Path, **kwargs) -> None:
 
 
 def fetch_proton_preramp(destination_dir: Path, **kwargs) -> None:
-    t1 = pd.to_datetime("2018-05-01 00:00:00").tz_localize("Europe/Zurich")
-    t2 = pd.to_datetime("2018-08-31 00:00:00").tz_localize("Europe/Zurich")
+    t1 = pd.to_datetime("2018-05-05 00:00:00").tz_localize("Europe/Zurich")
+    t2 = pd.to_datetime("2018-10-24 00:00:00").tz_localize("Europe/Zurich")
     return fetch(
         t1,
         t2,
