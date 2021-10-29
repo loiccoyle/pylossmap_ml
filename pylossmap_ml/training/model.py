@@ -1,13 +1,7 @@
 from typing import List, Optional
 
+from tensorflow.keras.layers import Conv1D, Conv1DTranspose, Dropout, Input
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import (
-    Dropout,
-    Input,
-    Conv1D,
-    Dropout,
-    Conv1DTranspose,
-)
 
 
 def create_model(

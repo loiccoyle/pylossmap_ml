@@ -1,7 +1,7 @@
 import json
-from unittest import TestCase
 from pathlib import Path
 from shutil import rmtree
+from unittest import TestCase
 
 import pandas as pd
 
