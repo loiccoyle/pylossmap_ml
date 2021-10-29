@@ -90,6 +90,11 @@ def parse_args(args: List[str]) -> argparse.Namespace:
         type=Path,
     )
     parser.add_argument(
+        "--copy-dataset-info",
+        help="Copy the dataset info file over.",
+        action="store_true",
+    )
+    parser.add_argument(
         "-v",
         "--verbose",
         help="Verbosity.",
@@ -205,5 +210,6 @@ def main() -> None:
         else:
             LOGGER.warning("Spooler does not implement concat.")
 
-    copy_dataset_info(args.raw_data_dir, args.destination)
+    if args.copy_dataset_info:
+        copy_dataset_info(args.raw_data_dir, args.destination)
     args_to_file(args)
