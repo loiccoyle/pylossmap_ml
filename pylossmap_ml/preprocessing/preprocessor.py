@@ -11,7 +11,7 @@ from .utils import INTENSITY, timber_to_df
 
 class BasePreprocessor:
     def __init__(
-        self, blm_list: Optional[List[str]] = None, drop_blm_names: bool = False
+        self, blm_list: Optional[List[str]] = None, drop_blm_names: bool = True
     ):
         self._log = logging.getLogger(__name__)
         self.blm_list = blm_list
@@ -86,7 +86,7 @@ class RollingWindowSum(NormMaxMixin, BasePreprocessor):
     def __init__(
         self,
         blm_list: Optional[List[str]] = None,
-        drop_blm_names: bool = False,
+        drop_blm_names: bool = True,
         window_size: str = "60s",
         min_periods: int = 60,
     ):
@@ -144,7 +144,7 @@ class NormMaxNoDump(NormMaxMixin, BasePreprocessor):
     def __init__(
         self,
         blm_list: Optional[List[str]] = None,
-        drop_blm_names: bool = False,
+        drop_blm_names: bool = True,
         intensity_threshold: float = 1500e11,
         intensity_threshold_dump: float = 1e11,
     ):
@@ -179,6 +179,9 @@ class NormMaxNoDump(NormMaxMixin, BasePreprocessor):
             int_B2.iloc[0] < self.intensity_threshold
         ).values:
             self._log.warning("%s start intensity too low.", path_to_hdf)
+            self._log.warning("B1 start intensity: %s", int_B1.iloc[0])
+            self._log.warning("B2 start intensity: %s", int_B2.iloc[0])
+            self._log.warning("Intensity threshold: %f", self.intensity_threshold)
             return None
 
         int_df = pd.concat([int_B1, int_B2], sort=False, axis=1)
