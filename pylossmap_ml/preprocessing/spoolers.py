@@ -66,7 +66,71 @@ class BaseSpooler:
 #                 )
 
 
-class SerialNumpy(BaseSpooler):
+# class SerialNumpy(BaseSpooler):
+#     def __init__(
+#         self, preprocessor: BasePreprocessor, raw_files: List[Path], output_dir: Path
+#     ):
+#         super().__init__(preprocessor, raw_files, output_dir)
+#         if not self.output.is_dir():
+#             self.output.mkdir(parents=True)
+
+
+#     def spool(self, **_):
+#         for file_path in tqdm(self.raw_files):
+#             out_filepath = self.output / (file_path.stem + ".npy")
+#             if out_filepath.is_file():
+#                 self._log.warning("%s exists.", out_filepath)
+#                 continue
+#             output = self.preprocessor.preprocess(file_path)
+#             if output is None:
+#                 self._log.warning("%s gives none.", out_filepath)
+#                 continue
+#             output = output.to_numpy()
+#             try:
+#                 np.save(out_filepath, output)
+#                 self._log.info("DONE %s", file_path)
+#             except Exception as exc:
+#                 self._log.error("failed: %s", file_path)
+#                 self._log.error(exc)
+
+
+class SerialSingleH5(BaseSpooler):
+    def spool(self, **kwargs) -> None:
+        for file_path in tqdm(self.raw_files):
+            fill_number = file_path.stem
+            with pd.HDFStore(self.output) as store:
+                # print(store.keys())
+                if "/" + fill_number in store.keys():
+                    self._log.warning("%s already in %s", fill_number, self.output)
+                    continue
+                # print(fill_number)
+                output = self.preprocessor.preprocess(file_path)
+                if output is None:
+                    continue
+                try:
+                    output.to_hdf(
+                        self.output,
+                        key=fill_number,
+                        format="table",
+                        append=True,
+                        **kwargs,
+                    )
+                    self._log.info("DONE %s", file_path)
+                except Exception as exc:
+                    self._log.error("failed: %s", file_path)
+                    self._log.error(exc)
+
+    def concat(self, concat_path: Path, key: str = "data", **kwargs) -> None:
+        with pd.HDFStore(self.output, **kwargs) as store:
+            for key in tqdm(store.keys()):
+                df = store[key]
+                self._log.info("key: %s", key)
+                self._log.info("key shape: %s", df.shape)
+                df.to_hdf(concat_path, key, format="table", append=True, **kwargs)
+                self._log.info("DONE %s", key)
+
+
+class SerialH5(BaseSpooler):
     def __init__(
         self, preprocessor: BasePreprocessor, raw_files: List[Path], output_dir: Path
     ):
@@ -74,99 +138,45 @@ class SerialNumpy(BaseSpooler):
         if not self.output.is_dir():
             self.output.mkdir(parents=True)
 
-    def spool(self):
-        for file_path in tqdm(self.raw_files):
-            out_filepath = self.output / (file_path.stem + ".npy")
-            if out_filepath.is_file():
-                print(f"{out_filepath} exists.")
-                continue
-            output = self.preprocessor.preprocess(file_path).to_numpy()
-            if output is None:
-                print(f"{out_filepath} gives none.")
-                continue
-            try:
-                np.save(out_filepath, output)
-                print(f"DONE {file_path}")
-            except Exception as exc:
-                print(file_path)
-                print(exc)
-
-
-class SerialSingleH5(BaseSpooler):
-    def __init__(
-        self,
-        preprocessor: BasePreprocessor,
-        raw_files: List[Path],
-        output: Path,
-        key: Optional[str] = None,
-    ):
-        """For some reason when using multiple processes, `pytimber.get`
-        freezes, this serial spooler works.
-        """
-        super().__init__(preprocessor, raw_files, output)
-        self.key = key
-
-    def spool(self, *args, **kwargs):
-        for file_path in tqdm(self.raw_files):
-            fill_number = file_path.stem
-            with pd.HDFStore(self.output) as store:
-                # print(store.keys())
-                if "/" + fill_number in store.keys():
-                    print(f"{fill_number} already in {self.output}")
-                    continue
-                # print(fill_number)
-                output = self.preprocessor.preprocess(file_path)
-                if output is None:
-                    continue
-                if self.key is not None:
-                    key = self.key
-                else:
-                    key = fill_number
-
-                try:
-                    output.to_hdf(
-                        self.output,
-                        key=key,
-                        format="table",
-                        append=True,
-                        *args,
-                        **kwargs,
-                    )
-                    print(f"DONE {file_path}")
-                except Exception as exc:
-                    print(file_path)
-                    print(exc)
-
-
-class SerialH5(SerialNumpy):
-    def spool(self, **kwargs):
+    def spool(self, key: str = "data", **kwargs) -> None:
         for file_path in tqdm(self.raw_files):
             out_filepath = self.output / (file_path.stem + ".h5")
             if out_filepath.is_file():
-                print(f"{out_filepath} exists.")
+                self._log.warning("%s exists.", out_filepath)
                 continue
             output = self.preprocessor.preprocess(file_path)
             if output is None:
-                print(f"{out_filepath} gives none.")
+                self._log.warning("%s gives none.", out_filepath)
                 continue
             try:
-                output.to_hdf(out_filepath, "data", format="table", **kwargs)
-                print(f"DONE {file_path}")
+                output.to_hdf(out_filepath, key, format="table", **kwargs)
+                self._log.info("DONE %s", file_path)
             except Exception as exc:
-                print(file_path)
-                print(exc)
+                self._log.error("failed: %s", file_path)
+                self._log.error(exc)
 
-
-class SerialSingleCSV(SerialSingleH5):
-    def spool(self):
-        for file_path in tqdm(self.raw_files):
-            output = self.preprocessor.preprocess(file_path)
-            if output is None:
-                print(f"{file_path} gives none.")
-                continue
+    def concat(self, concat_path: Path, key: str = "data", **kwargs) -> None:
+        for h5_file in tqdm(list(self.output.glob("*.h5"))):
+            # TODO: check is I need to specify the compression here or does pandas figure it out?
+            data = pd.read_hdf(h5_file, "data")
             try:
-                output.to_csv(self.output, mode="a", header=False)
-                print(f"DONE {file_path}")
+                data.to_hdf(concat_path, key, format="table", append=True, **kwargs)
+                self._log.info("DONE %s", h5_file)
             except Exception as exc:
-                print(file_path)
-                print(exc)
+                self._log.error("failed: %s", h5_file)
+                self._log.error(exc)
+
+
+# class SerialSingleCSV(SerialSingleH5):
+#     def spool(self, **_):
+#         for file_path in tqdm(self.raw_files):
+#             output = self.preprocessor.preprocess(file_path)
+#             if output is None:
+#                 self._log.warning("%s gives none.", file_path)
+#                 continue
+#             try:
+#                 output.to_csv(self.output, mode="a", header=False)
+#                 self._log.info("DONE %s", file_path)
+#             except Exception as exc:
+#                 self._log.error("failed: %s", file_path)
+#                 self._log.error(exc)
