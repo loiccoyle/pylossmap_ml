@@ -82,7 +82,7 @@ class NormSumMixin:
         return data.divide(data.sum(axis=1), axis=0)
 
 
-class RollingWindowSum(BasePreprocessor, NormMaxMixin):
+class RollingWindowSum(NormMaxMixin, BasePreprocessor):
     def __init__(
         self,
         blm_list: Optional[List[str]] = None,
@@ -129,7 +129,7 @@ class PassThrough(BasePreprocessor):
         return data
 
 
-class NormMax(BasePreprocessor, NormMaxMixin):
+class NormMax(NormMaxMixin, BasePreprocessor):
     """This preprocessor just normalizes the data to the highst BLM signal."""
 
     def _preprocess(self, path_to_hdf: Path) -> pd.DataFrame:
@@ -140,7 +140,7 @@ class NormMax(BasePreprocessor, NormMaxMixin):
         return data
 
 
-class NormMaxNoDump(BasePreprocessor, NormMaxMixin):
+class NormMaxNoDump(NormMaxMixin, BasePreprocessor):
     def __init__(
         self,
         blm_list: Optional[List[str]] = None,
@@ -200,7 +200,7 @@ class NormMaxNoDump(BasePreprocessor, NormMaxMixin):
         return data
 
 
-class NormSumNoDump(NormMaxNoDump, NormSumMixin):
+class NormSumNoDump(NormSumMixin, NormMaxNoDump):
     pass
 
 
