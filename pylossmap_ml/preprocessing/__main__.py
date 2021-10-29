@@ -50,13 +50,11 @@ def parse_args(args: List[str]) -> argparse.Namespace:
         "preprocessor",
         help="Data preprocessor.",
         choices=PREPROCESSORS,
-        type=type_preprocessor,
     )
     parser.add_argument(
         "spooler",
         help="Data spooler.",
         choices=SPOOLERS,
-        type=type_spooler,
     )
     parser.add_argument(
         "destination",
@@ -143,9 +141,11 @@ def main() -> None:
     else:
         blm_list = None
 
-    preproc = args.preprocessor(blm_list=blm_list, **args.preprocessor_kwargs)
+    preproc = type_preprocessor(
+        args.preprocessor(blm_list=blm_list, **args.preprocessor_kwargs)
+    )
     LOGGER.info("Preprocessor: %s", preprocessor)
-    spooler = args.spooler(preproc, raw_data_files, args.destination)
+    spooler = type_spooler(args.spooler(preproc, raw_data_files, args.destination))
     LOGGER.info("Spooler: %s", spooler)
     LOGGER.info("Spooling")
     spooler.spool(**args.h5_kwargs)
