@@ -3,7 +3,7 @@ import json
 import logging
 import sys
 from pathlib import Path
-from typing import List
+from typing import List, Callable
 
 from pylossmap import BLMData
 
@@ -28,11 +28,11 @@ def type_file(maybe_file: str) -> Path:
     return path_maybe_file
 
 
-def type_spooler(spooler: str) -> spoolers.BaseSpooler:
+def type_spooler(spooler: str) -> Callable[..., spoolers.BaseSpooler]:
     return getattr(spoolers, spooler)
 
 
-def type_preprocessor(pre: str) -> preprocessor.BasePreprocessor:
+def type_preprocessor(pre: str) -> Callable[..., preprocessor.BasePreprocessor]:
     return getattr(preprocessor, pre)
 
 
@@ -143,11 +143,11 @@ def main() -> None:
     else:
         blm_list = None
 
-    preproc = type_preprocessor(
-        args.preprocessor(blm_list=blm_list, **args.preprocessor_kwargs)
+    preproc = type_preprocessor(args.preprocessor)(
+        blm_list=blm_list, **args.preprocessor_kwargs
     )
     LOGGER.info("Preprocessor: %s", preprocessor)
-    spooler = type_spooler(args.spooler(preproc, raw_data_files, args.destination))
+    spooler = type_spooler(args.spooler)(preproc, raw_data_files, args.destination)
     LOGGER.info("Spooler: %s", spooler)
     LOGGER.info("Spooling")
     spooler.spool(**args.h5_kwargs)
