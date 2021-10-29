@@ -179,7 +179,7 @@ class NormMaxNoDump(NormMaxMixin, BasePreprocessor):
             self._log.warning("%s start intensity too low.", path_to_hdf)
             self._log.warning("B1 start intensity: %s", int_B1.iloc[0].values)
             self._log.warning("B2 start intensity: %s", int_B2.iloc[0].values)
-            self._log.warning("Intensity threshold: %f", self.intensity_threshold)
+            self._log.warning("Intensity threshold: %e", self.intensity_threshold)
             return None
 
         int_df = pd.concat([int_B1, int_B2], sort=False, axis=1)
