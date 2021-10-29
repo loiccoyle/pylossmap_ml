@@ -143,6 +143,10 @@ def main() -> None:
     else:
         blm_list = None
 
+    if args.verbose > 0 and blm_list is not None:
+        for blm in blm_list[:5]:
+            LOGGER.info(blm)
+
     preproc = type_preprocessor(args.preprocessor)(
         blm_list=blm_list, **args.preprocessor_kwargs
     )
