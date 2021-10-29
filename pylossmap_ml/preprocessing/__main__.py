@@ -63,7 +63,7 @@ def parse_args(args: List[str]) -> argparse.Namespace:
     )
     parser.add_argument(
         "--preprocessor-kwargs",
-        help='Preprocessor args, json format. e.g. "{"drop_blm_names": true}"',
+        help='Preprocessor args, json format. e.g. "{"drop_blm_names": false}"',
         type=json.loads,
         default={},
     )
@@ -130,7 +130,7 @@ def main() -> None:
         LOGGER.debug("Creating destination parent dir.")
         args.destination.parent.mkdir(parents=True)
 
-    raw_data_files = list(args.raw_data_dir.glob("*"))
+    raw_data_files = list(args.raw_data_dir.glob("*.h5"))
     if args.verbose > 0:
         LOGGER.info("Raw data dir: %s", args.raw_data_dir)
         for path in raw_data_files[:5]:
@@ -158,6 +158,6 @@ def main() -> None:
     if args.concat_path is not None:
         if hasattr(spooler, "concat"):
             LOGGER.info("Running concat.")
-            spooler.concat(**args.h5_kwrags)
+            spooler.concat(**args.h5_kwrags)  # type: ignore
         else:
             LOGGER.warning("Spooler does not implement concat.")
