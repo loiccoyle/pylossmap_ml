@@ -21,6 +21,7 @@ pytest = "^6.2.5"
 
 [tool.poetry.scripts]
 lm-fetch = 'pylossmap_ml.fetching.__main__:main'
+lm-preprocess = 'pylossmap_ml.preprocessing.__main__:main'
 
 
 [build-system]
