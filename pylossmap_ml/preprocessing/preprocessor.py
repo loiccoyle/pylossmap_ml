@@ -163,8 +163,6 @@ class NormMaxNoDump(NormMaxMixin, BasePreprocessor):
         path_to_hdf = Path(path_to_hdf)
         fill_number = int(path_to_hdf.stem)
         data, _ = self.load_raw(path_to_hdf)
-        # print(data.head())
-        # print(meta.head())
         beam_mode = data.index.get_level_values("mode")[0]
         print("pre filter", data.shape)
         data = self.blm_filter(data)
@@ -179,8 +177,8 @@ class NormMaxNoDump(NormMaxMixin, BasePreprocessor):
             int_B2.iloc[0] < self.intensity_threshold
         ).values:
             self._log.warning("%s start intensity too low.", path_to_hdf)
-            self._log.warning("B1 start intensity: %s", int_B1.iloc[0])
-            self._log.warning("B2 start intensity: %s", int_B2.iloc[0])
+            self._log.warning("B1 start intensity: %s", int_B1.iloc[0].values)
+            self._log.warning("B2 start intensity: %s", int_B2.iloc[0].values)
             self._log.warning("Intensity threshold: %f", self.intensity_threshold)
             return None
 
@@ -192,7 +190,6 @@ class NormMaxNoDump(NormMaxMixin, BasePreprocessor):
             .index[-1]
         )
         print("t_dump", t_dump)
-
         data = data.loc[:(beam_mode, t_dump)]
         print("data t_dumped", data.shape)
         data = self.normalize(data)
