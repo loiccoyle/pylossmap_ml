@@ -125,18 +125,18 @@ def get_blm_list_from_file(blm_file: Path) -> List[str]:
 
 def args_to_file(args: argparse.Namespace) -> None:
     """Write the args to file."""
-    args_dict = vars(args)
-
-    to_str = ["blm_list_file", "concat_path", "destination", "raw_data_dir"]
-    for key in to_str:
-        args_dict[key] = str(args_dict[key])
-
     if args.destination.is_dir():
         destination_file = args.destination / ".preprocess_info.json"
     else:
         destination_file = (
             args.destination.parent / f".{args.destination.stem}_preprocess_info.json"
         )
+
+    args_dict = vars(args)
+
+    to_str = ["blm_list_file", "concat_path", "destination", "raw_data_dir"]
+    for key in to_str:
+        args_dict[key] = str(args_dict[key])
 
     with open(destination_file, "w") as fp:
         LOGGER.info(
