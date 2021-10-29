@@ -178,7 +178,7 @@ class NormMaxNoDump(BasePreprocessor, NormMaxMixin):
         if (int_B1.iloc[0] < self.intensity_threshold).values or (
             int_B2.iloc[0] < self.intensity_threshold
         ).values:
-            print(path_to_hdf, "does not pass")
+            self._log.warning("%s start intensity too low.", path_to_hdf)
             return None
 
         int_df = pd.concat([int_B1, int_B2], sort=False, axis=1)
@@ -193,6 +193,7 @@ class NormMaxNoDump(BasePreprocessor, NormMaxMixin):
         data = data.loc[:(beam_mode, t_dump)]
         print("data t_dumped", data.shape)
         data = self.normalize(data)
+        print("data normalized", data.shape)
 
         # add the fill number to the dataframe.
         data = pd.concat([data], keys=[fill_number], names=["fill_number"])
