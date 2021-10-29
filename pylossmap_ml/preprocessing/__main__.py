@@ -4,6 +4,7 @@ import logging
 import sys
 from pathlib import Path
 from typing import List, Callable
+import shutil
 
 from pylossmap import BLMData
 
@@ -117,6 +118,48 @@ def get_blm_list_from_file(blm_file: Path) -> List[str]:
     return blms
 
 
+def args_to_file(args: argparse.Namespace) -> None:
+    """Write the args to file."""
+    args_dict = vars(args)
+
+    to_str = ["blm_list_file", "concat_path", "destination", "raw_data_dir"]
+    for key in to_str:
+        args_dict[key] = str(args_dict[key])
+
+    if args.destination.is_dir():
+        destination_file = args.destination / ".preprocess_info.json"
+    else:
+        destination_file = (
+            args.destination.parent / f".{args.destination.stem}_preprocess_info.json"
+        )
+
+    with open(destination_file, "w") as fp:
+        LOGGER.info(
+            "Writing args to file: %s",
+            destination_file.resolve(),
+        )
+        json.dump(args_dict, fp, indent=2)
+
+
+def copy_dataset_info(raw_data_dir: Path, destination: Path) -> None:
+    """Copy the dataset info json file over."""
+    info_file = raw_data_dir / ".dataset_info.json"
+    if info_file.is_file():
+        if destination.is_dir():
+            destination_file = destination / ".dataset_info.json"
+        else:
+            destination_file = (
+                destination.parent / f".{destination.stem}_dataset_info.json"
+            )
+
+        LOGGER.info(
+            "Copying dataset info: %s -> %s",
+            info_file.resolve(),
+            destination_file.resolve(),
+        )
+        shutil.copy(info_file, destination_file)
+
+
 def main() -> None:
     args = parse_args(sys.argv[1:])
 
@@ -161,3 +204,6 @@ def main() -> None:
             spooler.concat(**args.h5_kwrags)  # type: ignore
         else:
             LOGGER.warning("Spooler does not implement concat.")
+
+    copy_dataset_info(args.raw_data_dir, args.destination)
+    args_to_file(args)
