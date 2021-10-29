@@ -65,11 +65,13 @@ def parse_args(args: List[str]) -> argparse.Namespace:
         "--preprocessor-kwargs",
         help='Preprocessor args, json format. e.g. "{"drop_blm_names": true}"',
         type=json.loads,
+        default={},
     )
     parser.add_argument(
         "--h5-kwargs",
         help='pd.to_hdf & pd.from_hdf args, json format. e.g. "{"complib": "blosc"}"',
         type=json.loads,
+        default={},
     )
     parser.add_argument(
         "--blm-filter",
