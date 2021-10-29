@@ -135,7 +135,8 @@ def args_to_file(args: argparse.Namespace) -> None:
     args_dict = vars(args)
     to_str = ["blm_list_file", "concat_path", "destination", "raw_data_dir"]
     for key in to_str:
-        args_dict[key] = str(args_dict[key].resolve())
+        if args_dict[key] is not None:
+            args_dict[key] = str(args_dict[key].resolve())
 
     with open(destination_file, "w") as fp:
         LOGGER.info(
