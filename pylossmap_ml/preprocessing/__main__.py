@@ -206,7 +206,7 @@ def main() -> None:
     if args.concat_path is not None:
         if hasattr(spooler, "concat"):
             LOGGER.info("Running concat.")
-            spooler.concat(**args.h5_kwrags)  # type: ignore
+            spooler.concat(**args.h5_kwargs)  # type: ignore
         else:
             LOGGER.warning("Spooler does not implement concat.")
 
