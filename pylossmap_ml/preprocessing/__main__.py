@@ -178,7 +178,7 @@ def main() -> None:
         LOGGER.debug("Creating destination parent dir.")
         args.destination.parent.mkdir(parents=True)
 
-    raw_data_files = list(args.raw_data_dir.glob("*.h5"))
+    raw_data_files = sorted(args.raw_data_dir.glob("*.h5"))
     if args.verbose > 0:
         LOGGER.info("Raw data dir: %s", args.raw_data_dir)
         for path in raw_data_files[:5]:
