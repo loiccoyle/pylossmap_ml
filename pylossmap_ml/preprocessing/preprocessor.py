@@ -166,7 +166,9 @@ class NormMaxNoDump(BasePreprocessor, NormMaxMixin):
         # print(data.head())
         # print(meta.head())
         beam_mode = data.index.get_level_values("mode")[0]
+        print("pre filter", data.shape)
         data = self.blm_filter(data)
+        print("post filter", data.shape)
         t1 = data.index.get_level_values("timestamp")[0]
         t2 = data.index.get_level_values("timestamp")[-1]
         int_data = DB.get([INTENSITY.format(beam=1), INTENSITY.format(beam=2)], t1, t2)
@@ -180,14 +182,16 @@ class NormMaxNoDump(BasePreprocessor, NormMaxMixin):
             return None
 
         int_df = pd.concat([int_B1, int_B2], sort=False, axis=1)
-        # get the last timestamp where the intensity is above 1e11
+        # get the last timestamp where the intensity is above threshold
         t_dump = (
             int_df[(int_df > self.intensity_threshold_dump).all(axis=1)]
             .dropna()
             .index[-1]
         )
+        print("t_dump", t_dump)
 
         data = data.loc[:(beam_mode, t_dump)]
+        print("data t_dumped", data.shape)
         data = self.normalize(data)
 
         # add the fill number to the dataframe.
