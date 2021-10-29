@@ -100,9 +100,9 @@ def get_blm_list_from_filter(data_file: Path, filter: str) -> List[str]:
     """Load some BLM data, aplly the BLM regex filter and return what is left."""
 
     blm_data = BLMData.load(data_file)
-    LOGGER.debug("Number of BLMs pre filter: %s", len(blm_data.columns))
+    LOGGER.debug("Number of BLMs pre filter: %s", len(blm_data.df.columns))
     filtered = blm_data.filter(filter)
-    LOGGER.debug("Number of BLMs post filter: %s", len(filtered.columns))
+    LOGGER.debug("Number of BLMs post filter: %s", len(filtered.df.columns))
     return filtered.df.columns.to_list()
 
 
