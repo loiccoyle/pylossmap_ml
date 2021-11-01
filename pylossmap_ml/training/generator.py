@@ -54,7 +54,7 @@ class DataGenerator(Sequence):
             batch_size: the number of samples to load at each iteration.
             seed: the random seed.
             norm_method: the normalization method to use.
-            norm_axis: the normalization axis, 0 to normaliza each BLM accross
+            norm_axis: the normalization axis, 0 to normaliza each BLM across
                 the entire dataset. 1 to normalize each loss map.
             norm_kwargs: passed to the normalization method.
             BLM_names: The names of the BLM columns in the `data_file`.
@@ -157,7 +157,13 @@ class DataGenerator(Sequence):
         split_params["indices"] = split_indices
         remaining_params = self.to_dict()
         remaining_params["indices"] = remaining_indices
-        return DataGenerator(**split_params), DataGenerator(**remaining_params)
+
+        # compute the mins & maxes across the entire dataset
+        generator_split = DataGenerator(**split_params)
+        generator_split._mins_maxes = self.mins_maxes
+        generator_remaining = DataGenerator(**remaining_params)
+        generator_remaining._mins_maxes = self.mins_maxes
+        return generator_split, generator_remaining
 
     def get_metadata(self, entire_data_file: bool = False, **kwargs) -> np.ndarray:
         """Read the index of the data file.
