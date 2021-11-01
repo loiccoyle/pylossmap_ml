@@ -10,6 +10,7 @@ from pylossmap import BLMData
 
 from . import preprocessor, spoolers
 
+
 SPOOLERS = ["SerialH5", "SerialSingleH5"]
 PREPROCESSORS = ["NormMaxNoDump", "NormSumNoDump", "PassThrough", "RollingWindowSum"]
 LOGGER = logging.getLogger(__name__)
@@ -61,6 +62,11 @@ def parse_args(args: List[str]) -> argparse.Namespace:
         "destination",
         help="Destination.",
         type=Path,
+    )
+    parser.add_argument(
+        "--load-defaults",
+        help="Load the default args from a json file, e.g. .preprocess_info.json",
+        type=type_file,
     )
     parser.add_argument(
         "--preprocessor-kwargs",
@@ -123,16 +129,16 @@ def get_blm_list_from_file(blm_file: Path) -> List[str]:
     return blms
 
 
-def args_to_file(args: argparse.Namespace) -> None:
+def args_to_file(args_dict: dict) -> None:
     """Write the args to file."""
-    if args.destination.is_dir():
-        destination_file = args.destination / ".preprocess_info.json"
+    if args_dict["destination"].is_dir():
+        destination_file = args_dict["destination"] / ".preprocess_info.json"
     else:
         destination_file = (
-            args.destination.parent / f".{args.destination.stem}_preprocess_info.json"
+            args_dict["destination"].parent
+            / f".{args_dict['destination'].stem}_preprocess_info.json"
         )
 
-    args_dict = vars(args)
     to_str = ["blm_list_file", "concat_path", "destination", "raw_data_dir"]
     for key in to_str:
         if args_dict[key] is not None:
@@ -144,6 +150,19 @@ def args_to_file(args: argparse.Namespace) -> None:
             destination_file.resolve(),
         )
         json.dump(args_dict, fp, indent=2)
+
+
+def args_from_file(json_file: Path) -> dict:
+    """Read a file written by `args_to_file` and return the dictionary."""
+    with open(json_file, "r") as fp:
+        LOGGER.info("Reading args from: %s", json_file)
+        args_dict = json.load(fp)
+
+    to_path = ["blm_list_file", "concat_path", "destination", "raw_data_dir"]
+    for key in to_path:
+        if args_dict[key] is not None:
+            args_dict[key] = Path(args_dict[key])
+    return args_dict
 
 
 def copy_dataset_info(raw_data_dir: Path, destination: Path) -> None:
@@ -166,50 +185,59 @@ def copy_dataset_info(raw_data_dir: Path, destination: Path) -> None:
 
 
 def main() -> None:
-    args = parse_args(sys.argv[1:])
+    args = vars(parse_args(sys.argv[1:]))
 
-    if args.verbose > 0:
+    if args["load_defaults"]:
+        default_args = args_from_file(args["load_defaults"])
+        # get the args which have been set
+        args = {key: value for key, value in vars(args).items() if value}
+        # apply them ontop the new default args
+        args = {**default_args, **args}
+
+    if args["verbose"] > 0:
         verbose_map = {1: logging.INFO, 2: logging.DEBUG}
-        level = verbose_map[args.verbose]
+        level = verbose_map[args["verbose"]]
         LOGGER.setLevel(level)
 
     LOGGER.debug("Args: %s", args)
-    if not args.destination.parent.is_dir():
+    if not args["destination"].parent.is_dir():
         LOGGER.debug("Creating destination parent dir.")
-        args.destination.parent.mkdir(parents=True)
+        args["destination"].parent.mkdir(parents=True)
 
-    raw_data_files = sorted(args.raw_data_dir.glob("*.h5"))
-    if args.verbose > 0:
-        LOGGER.info("Raw data dir: %s", args.raw_data_dir)
+    raw_data_files = sorted(args["raw_data_dir"].glob("*.h5"))
+    if args["verbose"] > 0:
+        LOGGER.info("Raw data dir: %s", args["raw_data_dir"])
         for path in raw_data_files[:5]:
             LOGGER.info(path.name)
 
-    if args.blm_list_file is not None:
-        blm_list = get_blm_list_from_file(args.blm_list_file)
-    elif args.blm_filter is not None:
-        blm_list = get_blm_list_from_filter(raw_data_files[0], args.blm_filter)
+    if args["blm_list_file"] is not None:
+        blm_list = get_blm_list_from_file(args["blm_list_file"])
+    elif args["blm_filter"] is not None:
+        blm_list = get_blm_list_from_filter(raw_data_files[0], args["blm_filter"])
     else:
         blm_list = None
 
-    if args.verbose > 0 and blm_list is not None:
+    if args["verbose"] > 0 and blm_list is not None:
         for blm in blm_list[:5]:
             LOGGER.info(blm)
 
-    preproc = type_preprocessor(args.preprocessor)(
-        blm_list=blm_list, **args.preprocessor_kwargs
+    preproc = type_preprocessor(args["preprocessor"])(
+        blm_list=blm_list, **args["preprocessor_kwargs"]
     )
-    LOGGER.info("Preprocessor: %s", preprocessor)
-    spooler = type_spooler(args.spooler)(preproc, raw_data_files, args.destination)
+    LOGGER.info("Preprocessor: %s", ["preprocessor"])
+    spooler = type_spooler(args["spooler"])(
+        preproc, raw_data_files, args["destination"]
+    )
     LOGGER.info("Spooler: %s", spooler)
     LOGGER.info("Spooling")
-    spooler.spool(**args.h5_kwargs)
-    if args.concat_path is not None:
+    spooler.spool(**args["h5_kwargs"])
+    if args["concat_path"] is not None:
         if hasattr(spooler, "concat"):
-            LOGGER.info("Running concat: %s", args.concat_path)
-            spooler.concat(args.concat_path, **args.h5_kwargs)  # type: ignore
+            LOGGER.info("Running concat: %s", args["concat_path"])
+            spooler.concat(args["concat_path"], **args["h5_kwargs"])  # type: ignore
         else:
             LOGGER.warning("Spooler does not implement concat.")
 
-    if args.copy_dataset_info:
-        copy_dataset_info(args.raw_data_dir, args.destination)
+    if args["copy_dataset_info"]:
+        copy_dataset_info(args["raw_data_dir"], args["destination"])
     args_to_file(args)
