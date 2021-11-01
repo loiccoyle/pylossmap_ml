@@ -25,7 +25,7 @@ def type_dir(maybe_dir: str) -> Path:
 
 def type_file(maybe_file: str) -> Path:
     path_maybe_file = Path(maybe_file)
-    if not path_maybe_file.is_dir():
+    if not path_maybe_file.is_file():
         raise FileNotFoundError(f"'{maybe_file}' is not a file.")
     return path_maybe_file
 
