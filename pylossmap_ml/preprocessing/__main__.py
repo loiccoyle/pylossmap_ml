@@ -63,6 +63,7 @@ def parse_args(args: List[str]) -> argparse.Namespace:
         help="Destination.",
         type=Path,
     )
+    # TODO: this does not work because the argparse complains about the positional args
     parser.add_argument(
         "--load-defaults-path",
         help="Load the default args from a json file, e.g. .preprocess_info.json",
