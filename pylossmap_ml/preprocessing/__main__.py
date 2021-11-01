@@ -64,7 +64,7 @@ def parse_args(args: List[str]) -> argparse.Namespace:
         type=Path,
     )
     parser.add_argument(
-        "--load-defaults",
+        "--load-defaults-path",
         help="Load the default args from a json file, e.g. .preprocess_info.json",
         type=type_file,
     )
@@ -187,17 +187,17 @@ def copy_dataset_info(raw_data_dir: Path, destination: Path) -> None:
 def main() -> None:
     args = vars(parse_args(sys.argv[1:]))
 
-    if args["load_defaults"]:
-        default_args = args_from_file(args["load_defaults"])
-        # get the args which have been set
-        args = {key: value for key, value in vars(args).items() if value}
-        # apply them ontop the new default args
-        args = {**default_args, **args}
-
     if args["verbose"] > 0:
         verbose_map = {1: logging.INFO, 2: logging.DEBUG}
         level = verbose_map[args["verbose"]]
         LOGGER.setLevel(level)
+
+    if args["load_defaults_path"]:
+        default_args = args_from_file(args["load_defaults_path"])
+        # get the args which have been set
+        args = {key: value for key, value in vars(args).items() if value}
+        # apply them ontop the new default args
+        args = {**default_args, **args}
 
     LOGGER.debug("Args: %s", args)
     if not args["destination"].parent.is_dir():
