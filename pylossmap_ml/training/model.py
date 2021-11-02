@@ -7,11 +7,12 @@ from tensorflow.keras.models import Sequential
 def create_model(
     sequence_length: int,
     n_features: int = 1,
-    kernel_size: int = 7,
-    encoder_sizes: List[int] = [6, 3],
+    encoder_kernel_sizes: List[int] = [15, 10],
+    encoder_sizes: List[int] = [16, 32],
     encoder_strides: List[int] = [2, 2],
-    encoder_dropout: Optional[float] = 0.1,
-    decoder_sizes: Optional[List[int]] = None,
+    encoder_dropout: Optional[float] = None,
+    decoder_kernel_sizes: Optional[List[int]] = None,
+    decoder_sizes: Optional[List[int]] = [16, 1],
     decoder_strides: Optional[List[int]] = None,
     decoder_dropout: Optional[float] = None,
 ):
@@ -29,9 +30,13 @@ def create_model(
         decoder_sizes = encoder_sizes[::-1]
     if decoder_strides is None:
         decoder_strides = encoder_strides[::-1]
+    if decoder_kernel_sizes is None:
+        decoder_kernel_sizes = encoder_kernel_sizes[::-1]
 
     layers = [Input(shape=(sequence_length, n_features))]
-    for i, (layer_size, stride) in enumerate(zip(encoder_sizes, encoder_strides)):
+    for i, (kernel_size, layer_size, stride) in enumerate(
+        zip(encoder_kernel_sizes, encoder_sizes, encoder_strides)
+    ):
         encoder_layer = Conv1D(
             filters=layer_size,
             kernel_size=kernel_size,
@@ -45,13 +50,20 @@ def create_model(
             encoder_dropout_layer = Dropout(encoder_dropout)
             layers.append(encoder_dropout_layer)
 
-    for i, (layer_size, stride) in enumerate(zip(decoder_sizes, decoder_strides)):
+    for i, (kernel_size, layer_size, stride) in enumerate(
+        zip(decoder_kernel_sizes, decoder_sizes, decoder_strides)
+    ):
+        if i != len(decoder_sizes) - 1:
+            activation = "relu"
+        else:
+            activation = None
+
         decoder_layer = Conv1DTranspose(
             filters=layer_size,
             kernel_size=kernel_size,
             padding="same",
             strides=stride,
-            activation="relu",
+            activation=activation,
         )
         layers.append(decoder_layer)
         if decoder_dropout is not None and i != len(decoder_sizes) - 1:
@@ -59,7 +71,7 @@ def create_model(
             decoder_dropout_layer = Dropout(decoder_dropout)
             layers.append(decoder_dropout_layer)
 
-    layers.append(
-        Conv1DTranspose(filters=n_features, kernel_size=7, padding="same"),
-    )
+    # layers.append(
+    #     Conv1DTranspose(filters=n_features, kernel_size=7, padding="same"),
+    # )
     return Sequential(layers)
