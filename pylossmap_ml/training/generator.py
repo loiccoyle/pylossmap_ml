@@ -296,7 +296,7 @@ class DataGenerator(Sequence):
         """
         dump_kwargs = {"indent": 2}
         param_dict = self.to_dict()
-        param_dict["data_file"] = str(param_dict["data_file"])
+        param_dict["data_file"] = str(param_dict["data_file"].resolve())
         param_dict["BLM_dcum"] = param_dict["BLM_dcum"].to_dict()
         if param_dict["indices"] is not None:
             param_dict["indices"] = param_dict["indices"].tolist()
