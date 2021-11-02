@@ -82,7 +82,7 @@ class DataGenerator(Sequence):
         self._data_len = self.get_data_length()
         if indices is None:
             self._log.debug("Creating indices.")
-            indices = np.arange(self._data_len)
+            indices = np.arange(self._data_len) # type: np.ndarray
             if self.shuffle:
                 self._log.debug("Shuffling indices, seed %s", self.seed)
                 self._rng.shuffle(indices)
