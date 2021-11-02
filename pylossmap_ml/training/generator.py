@@ -82,7 +82,7 @@ class DataGenerator(Sequence):
         self._data_len = self.get_data_length()
         if indices is None:
             self._log.debug("Creating indices.")
-            indices = np.arange(self._data_len) # type: np.ndarray
+            indices = np.arange(self._data_len)  # type: np.ndarray
             if self.shuffle:
                 self._log.debug("Shuffling indices, seed %s", self.seed)
                 self._rng.shuffle(indices)
@@ -104,7 +104,7 @@ class DataGenerator(Sequence):
         maxes = []
         for chunk in tqdm(
             self.store.select(self.key, chunksize=self.batch_size, iterator=True),
-            total=self._data_len,
+            total=int(self._data_len // self.batch_size),
             desc=f"Computing mins & maxes, axis={self.norm_axis}",
         ):
 
