@@ -104,7 +104,7 @@ class DataGenerator(Sequence):
         maxes = []
         for chunk in tqdm(
             self.store.select(self.key, chunksize=self.batch_size, iterator=True),
-            total=self.__len__(),
+            total=self._data_len,
             desc=f"Computing mins & maxes, axis={self.norm_axis}",
         ):
 
