@@ -8,6 +8,8 @@ import pandas as pd
 from tensorflow.keras.utils import Sequence
 from tqdm.auto import tqdm
 
+# TODO: use https://www.tensorflow.org/guide/data_performance instead
+
 
 class DataGenerator(Sequence):
     @classmethod
@@ -82,7 +84,7 @@ class DataGenerator(Sequence):
         self._data_len = self.get_data_length()
         if indices is None:
             self._log.debug("Creating indices.")
-            indices = np.arange(self._data_len)  # type: np.ndarray
+            indices = np.arange(self._data_len)
             if self.shuffle:
                 self._log.debug("Shuffling indices, seed %s", self.seed)
                 self._rng.shuffle(indices)
