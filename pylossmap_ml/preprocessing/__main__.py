@@ -9,6 +9,7 @@ from typing import Callable, List
 from pylossmap import BLMData
 
 from . import preprocessor, spoolers
+from ..utils import PARTICLE_TYPE_MAP
 
 SPOOLERS = ["SerialH5", "SerialSingleH5"]
 PREPROCESSORS = [
@@ -95,6 +96,12 @@ def parse_args(args: List[str]) -> argparse.Namespace:
         "--blm-list-file",
         help="File containing the subset of BLMs, one per line.",
         type=type_file,
+    )
+    parser.add_argument(
+        "--particle-type",
+        help="Only preprocess fills with the provided particle type.",
+        choices=PARTICLE_TYPE_MAP.values(),
+        type=str,
     )
     parser.add_argument(
         "--concat-path",
@@ -228,7 +235,9 @@ def main() -> None:
             LOGGER.info(blm)
 
     preproc = type_preprocessor(args["preprocessor"])(
-        blm_list=blm_list, **args["preprocessor_kwargs"]
+        blm_list=blm_list,
+        particle_type=args.particle_type,
+        **args["preprocessor_kwargs"],
     )
     LOGGER.info("Preprocessor: %s", ["preprocessor"])
     spooler = type_spooler(args["spooler"])(
