@@ -12,7 +12,7 @@ from . import preprocessor, spoolers
 
 
 SPOOLERS = ["SerialH5", "SerialSingleH5"]
-PREPROCESSORS = ["NormMaxNoDump", "NormSumNoDump", "PassThrough", "RollingWindowSum"]
+PREPROCESSORS = ["NoDump", "NormMaxNoDump", "NormSumNoDump", "PassThrough", "RollingWindowSum"]
 LOGGER = logging.getLogger(__name__)
 
 

@@ -130,7 +130,7 @@ class PassThrough(BasePreprocessor):
 
 
 class NormMax(NormMaxMixin, BasePreprocessor):
-    """This preprocessor just normalizes the data to the highst BLM signal."""
+    """This preprocessor just normalizes the data to the highest BLM signal."""
 
     def _preprocess(self, path_to_hdf: Path) -> pd.DataFrame:
         path_to_hdf = Path(path_to_hdf)
@@ -140,7 +140,7 @@ class NormMax(NormMaxMixin, BasePreprocessor):
         return data
 
 
-class NormMaxNoDump(NormMaxMixin, BasePreprocessor):
+class NoDump(BasePreprocessor):
     def __init__(
         self,
         blm_list: Optional[List[str]] = None,
@@ -158,6 +158,10 @@ class NormMaxNoDump(NormMaxMixin, BasePreprocessor):
         super().__init__(blm_list=blm_list, drop_blm_names=drop_blm_names)
         self.intensity_threshold = intensity_threshold
         self.intensity_threshold_dump = intensity_threshold_dump
+
+    @staticmethod
+    def normalize(data: pd.DataFrame) -> pd.DataFrame:
+        return data
 
     def _preprocess(self, path_to_hdf: Path) -> Optional[pd.DataFrame]:
         path_to_hdf = Path(path_to_hdf)
@@ -200,7 +204,10 @@ class NormMaxNoDump(NormMaxMixin, BasePreprocessor):
         return data
 
 
-class NormSumNoDump(NormSumMixin, NormMaxNoDump):
+class NormMaxNoDump(NormMaxMixin, NoDump):
+    pass
+
+class NormSumNoDump(NormSumMixin, NoDump):
     pass
 
 
