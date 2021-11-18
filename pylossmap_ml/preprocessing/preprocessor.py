@@ -6,16 +6,21 @@ from typing import List, Optional, Tuple
 import pandas as pd
 
 from ..db import DB
+from ..utils import get_fill_particle
 from .utils import INTENSITY, timber_to_df
 
 
 class BasePreprocessor:
     def __init__(
-        self, blm_list: Optional[List[str]] = None, drop_blm_names: bool = True
+        self,
+        blm_list: Optional[List[str]] = None,
+        drop_blm_names: bool = True,
+        particle_type: Optional[str] = None,
     ):
         self._log = logging.getLogger(__name__)
         self.blm_list = blm_list
         self.drop_blm_names = drop_blm_names
+        self.particle_type = particle_type
 
     @abstractmethod
     def _preprocess(self, path_to_hdf: Path) -> Optional[pd.DataFrame]:
@@ -31,6 +36,21 @@ class BasePreprocessor:
     @abstractmethod
     def normalize(self, data: pd.DataFrame) -> pd.DataFrame:
         pass
+
+    @staticmethod
+    def path_to_fill(path: Path) -> int:
+        return int(path.stem)
+
+    @staticmethod
+    def check_particle_type(fill_number: int) -> bool:
+        if self.particle_type is None:
+            return True
+        return all(
+            [
+                beam_particle == self.particle_type
+                for beam_particle in get_fill_particle(fill_number)
+            ]
+        )
 
     def blm_filter(self, data: pd.DataFrame) -> pd.DataFrame:
         if self.blm_list is not None:
@@ -87,6 +107,7 @@ class RollingWindowSum(NormMaxMixin, BasePreprocessor):
         self,
         blm_list: Optional[List[str]] = None,
         drop_blm_names: bool = True,
+        particle_type: Optional[str] = None,
         window_size: str = "60s",
         min_periods: int = 60,
     ):
@@ -94,16 +115,24 @@ class RollingWindowSum(NormMaxMixin, BasePreprocessor):
 
         It normalize w.r.t. the highest BLM of each sample.
         """
-        super().__init__(blm_list=blm_list, drop_blm_names=drop_blm_names)
+        super().__init__(
+            blm_list=blm_list,
+            drop_blm_names=drop_blm_names,
+            particle_type=particle_type,
+        )
         self.window_size = window_size
         self.min_periods = min_periods
 
     def _preprocess(self, path_to_hdf: Path) -> pd.DataFrame:
         path_to_hdf = Path(path_to_hdf)
-        fill_number = int(path_to_hdf.stem)
-        # print(f'Loading {path_to_hdf}.')
+        fill_number = self.path_to_fill(path_to_hdf)
+        if not self.check_particle_type(fill_number):
+            self._log.warning(
+                "Fill %i particle type is not %s", fill_number, self.particle_type
+            )
+            return None
+
         data, _ = self.load_raw(path_to_hdf)
-        # print(f'Loaded {path_to_hdf}.')
         beam_mode = data.index.get_level_values("mode")[0]
         data = (
             data.droplevel("mode")
@@ -145,6 +174,7 @@ class NoDump(BasePreprocessor):
         self,
         blm_list: Optional[List[str]] = None,
         drop_blm_names: bool = True,
+        particle_type: Optional[str] = None,
         intensity_threshold: float = 1500e11,
         intensity_threshold_dump: float = 1e11,
     ):
@@ -155,7 +185,11 @@ class NoDump(BasePreprocessor):
         It also prunes the data to the last data point where the intensity is above
         the `intensity_threshold_dump` value.
         """
-        super().__init__(blm_list=blm_list, drop_blm_names=drop_blm_names)
+        super().__init__(
+            blm_list=blm_list,
+            drop_blm_names=drop_blm_names,
+            particle_type=particle_type,
+        )
         self.intensity_threshold = intensity_threshold
         self.intensity_threshold_dump = intensity_threshold_dump
 
@@ -166,6 +200,12 @@ class NoDump(BasePreprocessor):
     def _preprocess(self, path_to_hdf: Path) -> Optional[pd.DataFrame]:
         path_to_hdf = Path(path_to_hdf)
         fill_number = int(path_to_hdf.stem)
+        if not self.check_particle_type(fill_number):
+            self._log.warning(
+                "Fill %i particle type is not %s", fill_number, self.particle_type
+            )
+            return None
+
         data, _ = self.load_raw(path_to_hdf)
         beam_mode = data.index.get_level_values("mode")[0]
         print("pre filter", data.shape)
@@ -206,6 +246,7 @@ class NoDump(BasePreprocessor):
 
 class NormMaxNoDump(NormMaxMixin, NoDump):
     pass
+
 
 class NormSumNoDump(NormSumMixin, NoDump):
     pass
