@@ -8,6 +8,7 @@ from pylossmap import BLMDataFetcher
 from tqdm.auto import tqdm
 
 from ..db import DB
+from ..utils import get_fill_particle
 
 LOGGER = logging.getLogger(__name__)
 
@@ -29,6 +30,7 @@ def fetch(
     t1: pd.Timestamp,
     t2: pd.Timestamp,
     destination_dir: Path,
+    particle_type: str = None,
     beam_modes_fills: List[str] = ["STABLE"],
     beam_modes_fetch: List[str] = ["STABLE"],
     BLM_var: str = "LHC.BLMI:LOSS_RS01",
@@ -39,6 +41,7 @@ def fetch(
         t1: start timestamp.
         t2: stop timestamp.
         destination_dir: folder in which to write the data.
+        particle_type: restrict fetching to fill with provided particle type, either "proton" or "ion".
         beam_modes_fills: fetch data for fills which reach these beam modes.
         beam_modes_fetch: for the fills that pass, fetch data for this beam mode.
         BLM_var: the timber BLM var to fetch.
@@ -58,12 +61,23 @@ def fetch(
         t1=str(t1),
         t2=str(t2),
         destination_dir=str(destination_dir),
+        particle_type=particle_type,
         beam_modes_fills=beam_modes_fills,
         beam_modes_fetch=beam_modes_fetch,
         BLM_var=BLM_var,
     )
 
     for fill in tqdm(fills, desc="Fetching data"):
+        if particle_type is not None:
+            fill_particles = get_fill_particle(fill["fillNumber"])
+            if not all(
+                [beam_particle == particle_type for beam_particle in fill_particles]
+            ):
+                LOGGER.warning(
+                    "Fill %i particle type is not %s", fill["fillNumber"], particle_type
+                )
+                continue
+
         save_path = (destination_dir / str(fill["fillNumber"])).with_suffix(".h5")
         LOGGER.debug("save path: %s", save_path)
         if save_path.exists():
@@ -86,12 +100,13 @@ def fetch(
 # https://beams.cern/sites/beams.web.cern.ch/files/schedules/LHC_Schedule_2018.pdf
 # https://cds.cern.ch/record/2650574
 def fetch_ion_stable(destination_dir: Path, **kwargs) -> None:
-    t1 = pd.to_datetime("2018-11-08 00:00:00").tz_localize("Europe/Zurich")
-    t2 = pd.to_datetime("2018-12-04 00:00:00").tz_localize("Europe/Zurich")
+    t1 = pd.to_datetime("2018-11-00 00:00:00").tz_localize("Europe/Zurich")
+    t2 = pd.to_datetime("2018-12-31 00:00:00").tz_localize("Europe/Zurich")
     return fetch(
         t1,
         t2,
         destination_dir,
+        particle_type="ion",
         beam_modes_fills=["STABLE"],
         beam_modes_fetch=["STABLE"],
         **kwargs
@@ -100,11 +115,12 @@ def fetch_ion_stable(destination_dir: Path, **kwargs) -> None:
 
 def fetch_proton_stable(destination_dir: Path, **kwargs) -> None:
     t1 = pd.to_datetime("2018-05-05 00:00:00").tz_localize("Europe/Zurich")
-    t2 = pd.to_datetime("2018-10-24 00:00:00").tz_localize("Europe/Zurich")
+    t2 = pd.to_datetime("2018-11-00 00:00:00").tz_localize("Europe/Zurich")
     return fetch(
         t1,
         t2,
         destination_dir,
+        particle_type="proton",
         beam_modes_fills=["STABLE"],
         beam_modes_fetch=["STABLE"],
         **kwargs
@@ -113,11 +129,12 @@ def fetch_proton_stable(destination_dir: Path, **kwargs) -> None:
 
 def fetch_proton_preramp(destination_dir: Path, **kwargs) -> None:
     t1 = pd.to_datetime("2018-05-05 00:00:00").tz_localize("Europe/Zurich")
-    t2 = pd.to_datetime("2018-10-24 00:00:00").tz_localize("Europe/Zurich")
+    t2 = pd.to_datetime("2018-11-00 00:00:00").tz_localize("Europe/Zurich")
     return fetch(
         t1,
         t2,
         destination_dir,
+        particle_type="proton",
         beam_modes_fills=["STABLE"],
         beam_modes_fetch=["PRERAMP"],
         **kwargs

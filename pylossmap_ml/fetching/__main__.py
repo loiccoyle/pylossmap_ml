@@ -13,6 +13,7 @@ from .fetchers import (
     fetch_proton_preramp,
     fetch_proton_stable,
 )
+from ..utils import PARTICLE_TYPE_MAP
 
 PRECONFIGURED_MAP = {
     "ion_stable": fetch_ion_stable,
@@ -46,6 +47,12 @@ def parse_args(args: List[str]) -> argparse.Namespace:
         "--end",
         type=pd.to_datetime,
         help="End time.",
+    )
+    parser.add_argument(
+        "--particle-type",
+        type=str,
+        choices=PARTICLE_TYPE_MAP.values(),
+        help="Only fetch data for fills with the provided particle type.",
     )
     parser.add_argument(
         "--beam-modes-fills",
@@ -100,6 +107,7 @@ def main() -> None:
             args.start.tz_localize("Europe/Zurich"),
             args.stop.tz_localize("Europe/Zurich"),
             args.destination_dir,
+            particle_type=args.particle_type,
             beam_modes_fills=args.beam_modes_fills,
             beam_modes_fetch=args.beam_modes_fetch,
             BLM_var=args.blm_var,
