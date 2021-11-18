@@ -1,18 +1,23 @@
 import argparse
 import json
 import logging
+import shutil
 import sys
 from pathlib import Path
-from typing import List, Callable
-import shutil
+from typing import Callable, List
 
 from pylossmap import BLMData
 
 from . import preprocessor, spoolers
 
-
 SPOOLERS = ["SerialH5", "SerialSingleH5"]
-PREPROCESSORS = ["NoDump", "NormMaxNoDump", "NormSumNoDump", "PassThrough", "RollingWindowSum"]
+PREPROCESSORS = [
+    "NoDump",
+    "NormMaxNoDump",
+    "NormSumNoDump",
+    "PassThrough",
+    "RollingWindowSum",
+]
 LOGGER = logging.getLogger(__name__)
 
 
