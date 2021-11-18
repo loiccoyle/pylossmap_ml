@@ -100,12 +100,12 @@ def main() -> None:
     else:
         if args.start is None:
             raise argparse.ArgumentTypeError("No --start time provided.")
-        if args.stop is None:
-            raise argparse.ArgumentTypeError("No --stop time provided.")
+        if args.end is None:
+            raise argparse.ArgumentTypeError("No --end time provided.")
 
         fetch(
             args.start.tz_localize("Europe/Zurich"),
-            args.stop.tz_localize("Europe/Zurich"),
+            args.end.tz_localize("Europe/Zurich"),
             args.destination_dir,
             particle_type=args.particle_type,
             beam_modes_fills=args.beam_modes_fills,
