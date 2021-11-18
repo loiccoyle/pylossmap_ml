@@ -236,7 +236,7 @@ def main() -> None:
 
     preproc = type_preprocessor(args["preprocessor"])(
         blm_list=blm_list,
-        particle_type=args.particle_type,
+        particle_type=args["particle_type"],
         **args["preprocessor_kwargs"],
     )
     LOGGER.info("Preprocessor: %s", ["preprocessor"])
