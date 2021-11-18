@@ -41,8 +41,7 @@ class BasePreprocessor:
     def path_to_fill(path: Path) -> int:
         return int(path.stem)
 
-    @staticmethod
-    def check_particle_type(fill_number: int) -> bool:
+    def check_particle_type(self, fill_number: int) -> bool:
         if self.particle_type is None:
             return True
         return all(
