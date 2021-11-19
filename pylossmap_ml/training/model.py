@@ -56,16 +56,16 @@ def create_model(
         zip(decoder_kernel_sizes, decoder_sizes, decoder_strides)
     ):
         if i != len(decoder_sizes) - 1:
-            activation = activation
+            layer_activation = activation
         else:
-            activation = activation_last_layer
+            layer_activation = activation_last_layer
 
         decoder_layer = Conv1DTranspose(
             filters=layer_size,
             kernel_size=kernel_size,
             padding="same",
             strides=stride,
-            activation=activation,
+            activation=layer_activation,
         )
         layers.append(decoder_layer)
         if decoder_dropout is not None and i != len(decoder_sizes) - 1:
