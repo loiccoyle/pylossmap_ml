@@ -168,6 +168,77 @@ class NormMax(NormMaxMixin, BasePreprocessor):
         return data
 
 
+class NoDumpDiff(BasePreprocessor):
+    def __init__(
+        self,
+        blm_list: Optional[List[str]] = None,
+        drop_blm_names: bool = True,
+        particle_type: Optional[str] = None,
+        intensity_threshold: float = 1500e11,
+    ):
+        """This preprocessor normalizes to the highest BLM signal while also
+        filtering out fills where the starting intensity is below the `intensity_threshold`
+        value.
+
+        It also prunes the data to the last data point where the intensity is above
+        the `intensity_threshold_dump` value.
+        """
+        super().__init__(
+            blm_list=blm_list,
+            drop_blm_names=drop_blm_names,
+            particle_type=particle_type,
+        )
+        self.intensity_threshold = intensity_threshold
+
+    @staticmethod
+    def normalize(data: pd.DataFrame) -> pd.DataFrame:
+        return data
+
+    def _preprocess(self, path_to_hdf: Path) -> Optional[pd.DataFrame]:
+        path_to_hdf = Path(path_to_hdf)
+        fill_number = int(path_to_hdf.stem)
+        if not self.check_particle_type(fill_number):
+            self._log.warning(
+                "Fill %i particle type is not %s", fill_number, self.particle_type
+            )
+            return None
+
+        data, _ = self.load_raw(path_to_hdf)
+        beam_mode = data.index.get_level_values("mode")[0]
+        print("pre filter", data.shape)
+        data = self.blm_filter(data)
+        print("post filter", data.shape)
+        t1 = data.index.get_level_values("timestamp")[0]
+        t2 = data.index.get_level_values("timestamp")[-1]
+        int_data = DB.get([INTENSITY.format(beam=1), INTENSITY.format(beam=2)], t1, t2)
+        int_B1 = timber_to_df(int_data, INTENSITY.format(beam=1))
+        int_B2 = timber_to_df(int_data, INTENSITY.format(beam=2))
+        # if there is low intensity at the begining of the mode
+        if (int_B1.iloc[0] < self.intensity_threshold).values or (
+            int_B2.iloc[0] < self.intensity_threshold
+        ).values:
+            self._log.warning("%s start intensity too low.", path_to_hdf)
+            self._log.warning("B1 start intensity: %s", int_B1.iloc[0].values)
+            self._log.warning("B2 start intensity: %s", int_B2.iloc[0].values)
+            self._log.warning("Intensity threshold: %e", self.intensity_threshold)
+            return None
+
+        int_df = pd.concat([int_B1, int_B2], sort=False, axis=1)
+        if (int_df == 0).any().any():
+            self._log.info("Pruning the dump region.")
+            # get the last timestamp where the intensity is above threshold
+            t_dump_index = int_df.diff().reset_index(drop=True).idxmin().min() - 2
+            print("t_dump_index", t_dump_index)
+            data = data.iloc[:t_dump_index]
+            print("data pruned: ", data.shape)
+
+        data = self.normalize(data)
+        print("data normalized", data.shape)
+        # add the fill number to the dataframe.
+        data = pd.concat([data], keys=[fill_number], names=["fill_number"])
+        return data
+
+
 class NoDump(BasePreprocessor):
     def __init__(
         self,
@@ -248,6 +319,14 @@ class NormMaxNoDump(NormMaxMixin, NoDump):
 
 
 class NormSumNoDump(NormSumMixin, NoDump):
+    pass
+
+
+class NormMaxNoDumpDiff(NormMaxMixin, NoDumpDiff):
+    pass
+
+
+class NormSumNoDumpDiff(NormSumMixin, NoDumpDiff):
     pass
 
 
