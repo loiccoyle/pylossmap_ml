@@ -7,6 +7,8 @@ from tensorflow.keras.models import Sequential
 def create_model(
     sequence_length: int,
     n_features: int = 1,
+    activation: str = "relu",
+    activation_last_layer: Optional[str] = None,
     encoder_kernel_sizes: List[int] = [15, 10],
     encoder_sizes: List[int] = [16, 32],
     encoder_strides: List[int] = [2, 2],
@@ -42,7 +44,7 @@ def create_model(
             kernel_size=kernel_size,
             padding="same",
             strides=stride,
-            activation="relu",
+            activation=activation,
         )
         layers.append(encoder_layer)
         if encoder_dropout is not None and i != len(encoder_sizes) - 1:
@@ -54,16 +56,16 @@ def create_model(
         zip(decoder_kernel_sizes, decoder_sizes, decoder_strides)
     ):
         if i != len(decoder_sizes) - 1:
-            activation = "relu"
+            layer_activation = activation
         else:
-            activation = None
+            layer_activation = activation_last_layer
 
         decoder_layer = Conv1DTranspose(
             filters=layer_size,
             kernel_size=kernel_size,
             padding="same",
             strides=stride,
-            activation=activation,
+            activation=layer_activation,
         )
         layers.append(decoder_layer)
         if decoder_dropout is not None and i != len(decoder_sizes) - 1:
