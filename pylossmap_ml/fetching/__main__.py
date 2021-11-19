@@ -6,6 +6,7 @@ from typing import List
 
 import pandas as pd
 
+from ..utils import PARTICLE_TYPE_MAP
 from .fetchers import (
     LOGGER,
     fetch,
@@ -13,7 +14,6 @@ from .fetchers import (
     fetch_proton_preramp,
     fetch_proton_stable,
 )
-from ..utils import PARTICLE_TYPE_MAP
 
 PRECONFIGURED_MAP = {
     "ion_stable": fetch_ion_stable,
