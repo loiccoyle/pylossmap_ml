@@ -8,14 +8,17 @@ from typing import Callable, List
 
 from pylossmap import BLMData
 
-from . import preprocessor, spoolers
 from ..utils import PARTICLE_TYPE_MAP
+from . import preprocessor, spoolers
 
 SPOOLERS = ["SerialH5", "SerialSingleH5"]
 PREPROCESSORS = [
     "NoDump",
+    "NoDumpDiff",
     "NormMaxNoDump",
+    "NormMaxNoDumpDiff",
     "NormSumNoDump",
+    "NormSumNoDumpDiff",
     "PassThrough",
     "RollingWindowSum",
 ]
