@@ -242,7 +242,7 @@ def main() -> None:
         particle_type=args["particle_type"],
         **args["preprocessor_kwargs"],
     )
-    LOGGER.info("Preprocessor: %s", ["preprocessor"])
+    LOGGER.info("Preprocessor: %s", preproc)
     spooler = type_spooler(args["spooler"])(
         preproc, raw_data_files, args["destination"]
     )
