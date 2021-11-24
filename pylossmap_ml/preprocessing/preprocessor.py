@@ -226,7 +226,8 @@ class NoDumpDiff(BasePreprocessor):
         int_df = pd.concat([int_B1, int_B2], sort=False, axis=1)
         if (int_df == 0).any().any():
             self._log.info("Pruning the dump region.")
-            # get the last timestamp where the intensity is above threshold
+            # prune the leftover post dump data
+            # row where the big drop occurs
             t_dump_index = int_df.diff().reset_index(drop=True).idxmin().min() - 2
             print("t_dump_index", t_dump_index)
             data = data.iloc[:t_dump_index]
