@@ -96,14 +96,20 @@ class AnomalyDetectionModel:
     def metadata_train(self) -> pd.DataFrame:
         if self._metadata_train is None:
             logger.info("Loading train metadata.")
-            self._metadata_train = self.generator_train.get_metadata()
+            self._metadata_train = pd.DataFrame.from_records(
+                self.generator_train.get_metadata(),
+                columns=["fill_number", "beam_mode", "timestamp"],
+            )
         return self._metadata_train
 
     @property
     def metadata_val(self) -> pd.DataFrame:
         if self._metadata_val is None:
             logger.info("Loading validation metadata.")
-            self._metadata_val = self.generator_val.get_metadata()
+            self._metadata_val = pd.DataFrame.from_records(
+                self.generator_val.get_metadata(),
+                columns=["fill_number", "beam_mode", "timestamp"],
+            )
         return self._metadata_val
 
     def _chunk_predict_MSE(self, generator) -> np.ndarray:
