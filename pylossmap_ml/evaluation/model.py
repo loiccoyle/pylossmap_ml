@@ -187,6 +187,10 @@ class AnomalyDetectionModel:
         save_dict = {
             attribute: getattr(self, attribute) for attribute in kwarg_attributes
         }
+        save_dict = {
+            key: str(value) if value is not None else value
+            for key, value in save_dict.items()
+        }
         with open(save_path / "evaluation_kwargs.json", "w") as fp:
             json.dump(save_dict, fp)
 
