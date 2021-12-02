@@ -76,12 +76,12 @@ class AnomalyDetectionModel:
 
     @property
     def generator_train(self) -> DataGenerator:
-        if self._train_generator is None:
+        if self._generator_train is None:
             logger.info("Loading train generator.")
-            self._train_generator = DataGenerator.from_json(
+            self._generator_train = DataGenerator.from_json(
                 self.model_path / "generator_train.json"
             )
-        return self._train_generator
+        return self._generator_train
 
     @property
     def generator_val(self) -> DataGenerator:
