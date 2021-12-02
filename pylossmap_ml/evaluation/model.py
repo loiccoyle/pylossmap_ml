@@ -161,7 +161,7 @@ class AnomalyDetectionModel:
         lm = raw_data_fill.loss_map(timestamp)
         lm.df["data"] = ((lm.df["data"] - pre_lm.df["data"]) / pre_lm.df["data"]).abs()
         print("Max diff:", lm.df.iloc[lm.df["data"].argmax()])
-        _, ax = lm.plot(figsize=(14, 3), title=f"diff {loss_map.datetime}")
+        _, ax = lm.plot(figsize=(14, 3), title=f"diff {lm.datetime}")
         ax.set_yscale("linear")
         ax.relim()
         ax.autoscale(axis="y")
