@@ -225,6 +225,8 @@ class AnomalyDetectionModel:
     def plot_error(
         self, n_bins: int = 100, threshold: Optional[float] = None
     ) -> Tuple[plt.Figure, plt.Axes]:
+        if threshold is None:
+            threshold = self.threshold
         fig, ax = plt.subplots(1, 1, figsize=(9, 6))
         _, bins, _ = ax.hist(self.error_train, bins=n_bins, label="Training dataset")
         ax.hist(self.error_val, bins=bins, label="Validation dataset")
