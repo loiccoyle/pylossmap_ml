@@ -1,7 +1,7 @@
 import json
 import logging
 from pathlib import Path
-from typing import Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -18,6 +18,11 @@ logger = logging.getLogger(__name__)
 class AnomalyDetectionModel:
     @classmethod
     def load(cls, save_path: Union[Path, str]) -> "AnomalyDetectionModel":
+        """Load an instance from disk.
+
+        Args:
+            save_path: The path to the folder where the data was saved.
+        """
         if not isinstance(save_path, Path):
             save_path = Path(save_path)
         logger.debug("Loading kwargs.")
@@ -150,6 +155,23 @@ class AnomalyDetectionModel:
             self._error_val = self._chunk_predict_MSE(self.generator_val)
         return self._error_val
 
+    def threshold_from_quantile(
+        self, quantile: float = 0.99, datasets: Union[List[str], str] = ["train", "val"]
+    ):
+        """Compute an anomaly threshold for a given quantile.
+
+        Args:
+            quantile: quantile value.
+            datasets: On which dataset(s) to compute the quantile, "train", "val".
+
+        Returns:
+            The threshold value.
+        """
+        if not isinstance(datasets, list):
+            datasets = list(datasets)
+        datasets = np.hstack([getattr(self, "error_" + dset) for dset in datasets])
+        return np.quantile(datasets, quantile)
+
     def plot_error(
         self, n_bins: int = 100, threshold: Optional[float] = None
     ) -> Tuple[plt.Figure, plt.Axes]:
@@ -193,6 +215,11 @@ class AnomalyDetectionModel:
         ax.autoscale(axis="y")
 
     def save(self, save_path: Optional[Path] = None) -> None:
+        """Save the attributes to disk.
+
+        Args:
+            save_path: The path to the folder where the data should be saved.
+        """
         kwarg_attributes = [
             "model_path",
             "raw_data_path",
