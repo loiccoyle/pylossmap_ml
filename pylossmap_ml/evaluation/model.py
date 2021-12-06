@@ -1,7 +1,7 @@
 import json
 import logging
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -17,14 +17,21 @@ logger = logging.getLogger(__name__)
 
 class AnomalyDetectionModel:
     @classmethod
-    def load(cls, save_path: Path) -> "AnomalyDetectionModel":
+    def load(cls, save_path: Union[Path, str]) -> "AnomalyDetectionModel":
+        if not isinstance(save_path, Path):
+            save_path = Path(save_path)
+        logger.debug("Loading kwargs.")
         with open(save_path / "evaluation_kwargs.json", "r") as fp:
             kwargs = json.load(fp)
 
         out = cls(**kwargs)
+        logger.debug("Loading metadata train.")
         out._metadata_train = pd.read_hdf(save_path / "metadata_train.h5", "data")
+        logger.debug("Loading metadata val.")
         out._metadata_val = pd.read_hdf(save_path / "metadata_val.h5", "data")
+        logger.debug("Loading mse train.")
         out._mse_train = np.load(save_path / "mse_train.npy")
+        logger.debug("Loading mse train.")
         out._mse_val = np.load(save_path / "mse_val.npy")
         return out
 
@@ -112,7 +119,7 @@ class AnomalyDetectionModel:
             )
         return self._metadata_val
 
-    def _chunk_predict_MSE(self, generator) -> np.ndarray:
+    def _chunk_predict_MSE(self, generator: DataGenerator) -> np.ndarray:
         """Iteratively compute the models prediction on the generator."""
         MSE_chunks = []
         for chunk, _ in tqdm(generator):
@@ -120,6 +127,14 @@ class AnomalyDetectionModel:
             chunk_MSE = ((chunk_pred - chunk) ** 2).mean(axis=1)
             MSE_chunks.append(chunk_MSE)
         return np.vstack(MSE_chunks).squeeze()
+
+    def _chunk_predict_MAE(self, generator: DataGenerator) -> np.ndarray:
+        MAE_chunks = []
+        for chunk, _ in tqdm(generator):
+            chunk_pred = self.model.predict(chunk)
+            chunk_MAE = (np.abs(chunk_pred - chunk)).mean(axis=1)
+            MAE_chunks.append(chunk_MAE)
+        return np.vstack(MAE_chunks).squeeze()
 
     @property
     def mse_train(self) -> np.ndarray:
@@ -197,13 +212,16 @@ class AnomalyDetectionModel:
             key: str(value) if value is not None else value
             for key, value in save_dict.items()
         }
+        logger.debug("Saving kwargs.")
         with open(save_path / "evaluation_kwargs.json", "w") as fp:
             json.dump(save_dict, fp)
 
         for attribute in df_attributes:
+            logger.debug(f"Saving {attribute}.")
             df = getattr(self, attribute)
             df.to_hdf(save_path / f"{attribute}.h5", "data")
 
         for attribute in np_attributes:
+            logger.debug(f"Saving {attribute}.")
             np_array = getattr(self, attribute)
             np.save(save_path / f"{attribute}.npy", np_array)
