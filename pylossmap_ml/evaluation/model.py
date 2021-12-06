@@ -112,8 +112,10 @@ class AnomalyDetectionModel:
                 self.generator_train.get_metadata(),
                 columns=["fill_number", "beam_mode", "timestamp"],
             )
+            self._metadata_train["dataset"] = "train"
         if self._error_train is not None:
             self._metadata_train["MSE"] = self._error_train
+            self._metadata_train["rank"] = np.argsort(self.error_train)
         return self._metadata_train
 
     @property
@@ -124,9 +126,15 @@ class AnomalyDetectionModel:
                 self.generator_val.get_metadata(),
                 columns=["fill_number", "beam_mode", "timestamp"],
             )
+            self._metadata_val["dataset"] = "val"
         if self._error_val is not None:
             self._metadata_val["MSE"] = self._error_val
+            self._metadata_val["rank"] = np.argsort(self.error_val)
         return self._metadata_val
+
+    @property
+    def metatata(self) -> pd.DataFrame:
+        return pd.concat([self.metadata_train, self.metadata_val])
 
     def _chunk_predict_MSE(self, generator: DataGenerator) -> np.ndarray:
         """Iteratively compute the models prediction on the generator."""
@@ -158,6 +166,10 @@ class AnomalyDetectionModel:
             logger.info("Computing error validation.")
             self._error_val = self._chunk_predict_MSE(self.generator_val)
         return self._error_val
+
+    @property
+    def error(self) -> np.ndarray:
+        return np.hstack([self.error_train, self.error_val])
 
     def threshold_from_quantile(
         self, quantile: float = 0.99, datasets: Union[List[str], str] = ["train", "val"]
