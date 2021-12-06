@@ -112,6 +112,8 @@ class AnomalyDetectionModel:
                 self.generator_train.get_metadata(),
                 columns=["fill_number", "beam_mode", "timestamp"],
             )
+        if self._error_train is not None:
+            self._metadata_train["MSE"] = self._error_train
         return self._metadata_train
 
     @property
@@ -122,6 +124,8 @@ class AnomalyDetectionModel:
                 self.generator_val.get_metadata(),
                 columns=["fill_number", "beam_mode", "timestamp"],
             )
+        if self._error_val is not None:
+            self._metadata_val["MSE"] = self._error_val
         return self._metadata_val
 
     def _chunk_predict_MSE(self, generator: DataGenerator) -> np.ndarray:
@@ -224,13 +228,13 @@ class AnomalyDetectionModel:
             "model_path",
             "raw_data_path",
         ]
-        df_attributes = [
-            "metadata_train",
-            "metadata_val",
-        ]
         np_attributes = [
             "error_train",
             "error_val",
+        ]
+        df_attributes = [
+            "metadata_train",
+            "metadata_val",
         ]
         if save_path is None:
             save_path = Path.cwd() / self.model_path.name
@@ -248,12 +252,12 @@ class AnomalyDetectionModel:
         with open(save_path / "evaluation_kwargs.json", "w") as fp:
             json.dump(save_dict, fp)
 
-        for attribute in df_attributes:
-            logger.debug(f"Saving {attribute}.")
-            df = getattr(self, attribute)
-            df.to_hdf(save_path / f"{attribute}.h5", "data")
-
         for attribute in np_attributes:
             logger.debug(f"Saving {attribute}.")
             np_array = getattr(self, attribute)
             np.save(save_path / f"{attribute}.npy", np_array)
+
+        for attribute in df_attributes:
+            logger.debug(f"Saving {attribute}.")
+            df = getattr(self, attribute)
+            df.to_hdf(save_path / f"{attribute}.h5", "data")
