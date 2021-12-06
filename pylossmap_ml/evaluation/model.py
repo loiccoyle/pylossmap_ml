@@ -113,9 +113,11 @@ class AnomalyDetectionModel:
                 columns=["fill_number", "beam_mode", "timestamp"],
             )
             self._metadata_train["dataset"] = "train"
-        if self._error_train is not None:
-            self._metadata_train["MSE"] = self._error_train
-            self._metadata_train["rank"] = np.argsort(self.error_train)
+
+            if self._error_train is not None:
+                self._metadata_train["MSE"] = self._error_train
+                self._metadata_train["rank"] = np.argsort(self.error_train)
+
         return self._metadata_train
 
     @property
@@ -127,9 +129,11 @@ class AnomalyDetectionModel:
                 columns=["fill_number", "beam_mode", "timestamp"],
             )
             self._metadata_val["dataset"] = "val"
-        if self._error_val is not None:
-            self._metadata_val["MSE"] = self._error_val
-            self._metadata_val["rank"] = np.argsort(self.error_val)
+
+            if self._error_val is not None:
+                self._metadata_val["rank"] = np.argsort(self.error_val)
+                self._metadata_val["MSE"] = self._error_val
+
         return self._metadata_val
 
     @property
@@ -158,6 +162,11 @@ class AnomalyDetectionModel:
         if self._error_train is None:
             logger.info("Computing error train.")
             self._error_train = self._chunk_predict_MSE(self.generator_train)
+
+            if self._metadata_train is not None:
+                self._metadata_train["MSE"] = self._error_train
+                self._metadata_train["rank"] = np.argsort(self.error_train)
+
         return self._error_train
 
     @property
@@ -165,6 +174,11 @@ class AnomalyDetectionModel:
         if self._error_val is None:
             logger.info("Computing error validation.")
             self._error_val = self._chunk_predict_MSE(self.generator_val)
+
+            if self._metadata_val is not None:
+                self._metadata_val["MSE"] = self._error_val
+                self._metadata_val["rank"] = np.argsort(self.error_val)
+
         return self._error_val
 
     @property
