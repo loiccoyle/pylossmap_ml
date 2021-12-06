@@ -28,8 +28,10 @@ class AnomalyDetectionModel:
         logger.debug("Loading kwargs.")
         with open(save_path / "evaluation_kwargs.json", "r") as fp:
             kwargs = json.load(fp)
-        kwargs["model_path"] = Path(kwargs["model_path"])
-        kwargs["raw_data_path"] = Path(kwargs["raw_data_path"])
+        if kwargs["model_path"] is not None:
+            kwargs["model_path"] = Path(kwargs["model_path"])
+        if kwargs["raw_data_path"] is not None:
+            kwargs["raw_data_path"] = Path(kwargs["raw_data_path"])
 
         out = cls(**kwargs)
         logger.debug("Loading metadata train.")
