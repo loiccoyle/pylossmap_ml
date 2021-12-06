@@ -29,10 +29,10 @@ class AnomalyDetectionModel:
         out._metadata_train = pd.read_hdf(save_path / "metadata_train.h5", "data")
         logger.debug("Loading metadata val.")
         out._metadata_val = pd.read_hdf(save_path / "metadata_val.h5", "data")
-        logger.debug("Loading mse train.")
-        out._mse_train = np.load(save_path / "mse_train.npy")
-        logger.debug("Loading mse train.")
-        out._mse_val = np.load(save_path / "mse_val.npy")
+        logger.debug("Loading error train.")
+        out._error_train = np.load(save_path / "error_train.npy")
+        logger.debug("Loading error val.")
+        out._error_val = np.load(save_path / "error_val.npy")
         return out
 
     def __init__(self, model_path: Path, raw_data_path: Optional[Path] = None) -> None:
@@ -46,8 +46,8 @@ class AnomalyDetectionModel:
         self._generator_val = None
         self._metadata_train = None
         self._metadata_val = None
-        self._mse_train = None
-        self._mse_val = None
+        self._error_train = None
+        self._error_val = None
 
     @property
     def model(self):
@@ -137,24 +137,28 @@ class AnomalyDetectionModel:
         return np.vstack(MAE_chunks).squeeze()
 
     @property
-    def mse_train(self) -> np.ndarray:
-        if self._mse_train is None:
-            logger.info("Computing MSE train.")
-            self._mse_train = self._chunk_predict_MSE(self.generator_train)
-        return self._mse_train
+    def error_train(self) -> np.ndarray:
+        if self._error_train is None:
+            logger.info("Computing error train.")
+            self._error_train = self._chunk_predict_MSE(self.generator_train)
+        return self._error_train
 
     @property
-    def mse_val(self) -> np.ndarray:
-        if self._mse_val is None:
-            logger.info("Computing MSE validation.")
-            self._mse_val = self._chunk_predict_MSE(self.generator_val)
-        return self._mse_val
+    def error_val(self) -> np.ndarray:
+        if self._error_val is None:
+            logger.info("Computing error validation.")
+            self._error_val = self._chunk_predict_MSE(self.generator_val)
+        return self._error_val
 
-    def plot_mse(self, n_bins: int = 100) -> Tuple[plt.Figure, plt.Axes]:
+    def plot_error(
+        self, n_bins: int = 100, threshold: Optional[float] = None
+    ) -> Tuple[plt.Figure, plt.Axes]:
         fig, ax = plt.subplots(1, 1, figsize=(9, 6))
-        _, bins, _ = ax.hist(self.mse_train, bins=n_bins)
-        ax.hist(self.mse_val, bins=bins)
+        _, bins, _ = ax.hist(self.error_train, bins=n_bins)
+        ax.hist(self.error_val, bins=bins)
         ax.set_yscale("log")
+        if threshold is not None:
+            ax.axvline(threshold)
         return fig, ax
 
     def load_raw_data_fill(self, fill: int) -> BLMData:
@@ -197,8 +201,8 @@ class AnomalyDetectionModel:
             "metadata_val",
         ]
         np_attributes = [
-            "mse_train",
-            "mse_val",
+            "error_train",
+            "error_val",
         ]
         if save_path is None:
             save_path = Path.cwd() / self.model_path.name
