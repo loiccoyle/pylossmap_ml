@@ -199,7 +199,9 @@ class AnomalyDetectionModel:
             assert self.error_train is not None
         if self._error_val is None:
             assert self.error_val is not None
-        return self.metadata[self.metadata["MSE"] > self.threshold]
+        anomalies = self.metadata[self.metadata["MSE"] > self.threshold]
+        anomalies.sort_values("MSE", ascending=False, inplace=True)
+        return anomalies
 
     @property
     def error(self) -> np.ndarray:
