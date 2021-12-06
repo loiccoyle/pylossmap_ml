@@ -133,7 +133,7 @@ class AnomalyDetectionModel:
         return self._metadata_val
 
     @property
-    def metatata(self) -> pd.DataFrame:
+    def metadata(self) -> pd.DataFrame:
         return pd.concat([self.metadata_train, self.metadata_val])
 
     def _chunk_predict_MSE(self, generator: DataGenerator) -> np.ndarray:
