@@ -44,9 +44,15 @@ class AnomalyDetectionModel:
         out._error_val = np.load(save_path / "error_val.npy")
         return out
 
-    def __init__(self, model_path: Path, raw_data_path: Optional[Path] = None) -> None:
+    def __init__(
+        self,
+        model_path: Path,
+        raw_data_path: Optional[Path] = None,
+        threshold: Optional[float] = None,
+    ) -> None:
         self.model_path = model_path
         self.raw_data_path = raw_data_path
+        self.threshold = threshold
         self._model = None
         self._train_kwargs = None
         self._history = None
@@ -186,6 +192,16 @@ class AnomalyDetectionModel:
         return self._error_val
 
     @property
+    def anomalies(self) -> pd.DataFrame:
+        if self.threshold is None:
+            raise ValueError("'threshold' is not set.")
+        if self._error_train is None:
+            assert self.error_train is not None
+        if self._error_val is None:
+            assert self.error_val is not None
+        return self.metadata[self.metadata["MSE"] > self.threshold]
+
+    @property
     def error(self) -> np.ndarray:
         return np.hstack([self.error_train, self.error_val])
 
@@ -257,6 +273,7 @@ class AnomalyDetectionModel:
         kwarg_attributes = [
             "model_path",
             "raw_data_path",
+            "threshold",
         ]
         np_attributes = [
             "error_train",
