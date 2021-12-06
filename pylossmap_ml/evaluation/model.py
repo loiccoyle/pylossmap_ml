@@ -154,11 +154,12 @@ class AnomalyDetectionModel:
         self, n_bins: int = 100, threshold: Optional[float] = None
     ) -> Tuple[plt.Figure, plt.Axes]:
         fig, ax = plt.subplots(1, 1, figsize=(9, 6))
-        _, bins, _ = ax.hist(self.error_train, bins=n_bins)
-        ax.hist(self.error_val, bins=bins)
+        _, bins, _ = ax.hist(self.error_train, bins=n_bins, label="Training dataset")
+        ax.hist(self.error_val, bins=bins, label="Validation dataset")
         ax.set_yscale("log")
         if threshold is not None:
             ax.axvline(threshold)
+        ax.legend()
         return fig, ax
 
     def load_raw_data_fill(self, fill: int) -> BLMData:
