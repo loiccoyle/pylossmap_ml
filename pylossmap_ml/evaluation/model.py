@@ -240,7 +240,7 @@ class AnomalyDetectionModel:
         anomalies["beam_mode_start"] = pd.to_datetime(anomalies["beam_mode_start"])
         anomalies["beam_mode_end"] = pd.to_datetime(anomalies["beam_mode_end"])
         anomalies["timestamp_rel_bm"] = (
-            anomalies["beam_mode_end"] - anomalies["timestamp"]
+            anomalies["timestamp"] - anomalies["beam_mode_start"] 
         ) / (anomalies["beam_mode_end"] - anomalies["beam_mode_start"])
         return anomalies
 
