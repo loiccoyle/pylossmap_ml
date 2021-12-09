@@ -222,17 +222,24 @@ class AnomalyDetectionModel:
             logger.debug("Fill info: %s", fill_info)
             for mode in fill_info["beamModes"]:
                 if mode["mode"] == beam_mode:
-                    mode_start = pd.to_datetime(mode["startTime"], unit="s", utc=True).tz_convert("Europe/Zurich")
-                    mode_end = pd.to_datetime(mode["endTime"], unit="s", utc=True).tz_convert("Europe/Zurich")
+                    mode_start = pd.to_datetime(
+                        mode["startTime"], unit="s", utc=True
+                    ).tz_convert("Europe/Zurich")
+                    mode_end = pd.to_datetime(
+                        mode["endTime"], unit="s", utc=True
+                    ).tz_convert("Europe/Zurich")
 
-                    anomalies.loc[anomalies["fill_number"] == fill_number, "beam_mode_start"] = mode_start
-                    anomalies.loc[anomalies["fill_number"] == fill_number, "beam_mode_end"] = mode_end
+                    anomalies.loc[
+                        anomalies["fill_number"] == fill_number, "beam_mode_start"
+                    ] = mode_start
+                    anomalies.loc[
+                        anomalies["fill_number"] == fill_number, "beam_mode_end"
+                    ] = mode_end
                     break
 
         anomalies["beam_mode_start"] = pd.to_datetime(anomalies["beam_mode_start"])
         anomalies["beam_mode_end"] = pd.to_datetime(anomalies["beam_mode_end"])
         return anomalies
-
 
     def threshold_from_quantile(
         self, quantile: float = 0.99, datasets: Union[List[str], str] = ["train", "val"]
@@ -269,6 +276,41 @@ class AnomalyDetectionModel:
         if self.raw_data_path is None:
             raise ValueError("No 'raw_data_path' provided.")
         return BLMData.load(self.raw_data_path / f"{fill}.h5")
+
+    def plot_anomaly_fill_timings(
+        self, anomalies: Optional[pd.DataFrame], **kwargs
+    ) -> Tuple[plt.Figure, List[plt.Axes]]:
+        """Plot the distribution of the anomalies in the beam mode of each fill.
+
+        Args:
+            anomalies: the dataframe containing the anomalies.
+            **kwargs: passed to `plt.scatter`.
+
+        Returns:
+            The plt.Figure and plt.Axes.
+        """
+        if anomalies is None:
+            anomalies = self.anomalies
+        if "timestamp_rel_bm" not in anomalies.columns:
+            anomalies = self.add_fill_beammode_timings(anomalies)
+
+        fig = plt.figure(
+            constrained_layout=True, figsize=kwargs.pop("figsize", (12, 3))
+        )
+        gs = fig.add_gridspec(1, 4)
+        axes = []
+        axes.append(fig.add_subplot(gs[0, :-1]))
+        axes.append(fig.add_subplot(gs[0, -1:], sharey=axes[-1]))
+
+        axes[0].scatter(
+            anomalies["fill_number"].apply(str), anomalies["timestamp_rel_bm"], **kwargs
+        )
+        axes[0].tick_params(axis="x", labelrotation=45)
+        axes[0].set_ylabel("Position in the beam mode")
+        axes[0].set_xlabel("Fill number")
+        axes[1].hist(anomalies["timestamp_rel_bm"], orientation="horizontal")
+        axes[1].set_xlabel("Count")
+        return fig, axes
 
     def plot_anomaly_fills(
         self, anomalies: Optional[pd.DataFrame] = None, **kwargs
