@@ -227,6 +227,9 @@ class AnomalyDetectionModel:
 
                     anomalies.loc[anomalies["fill_number"] == fill_number, "beam_mode_start"] = mode_start
                     anomalies.loc[anomalies["fill_number"] == fill_number, "beam_mode_end"] = mode_end
+
+        anomalies["beam_mode_start"] = pd.to_datetime(anomalies["beam_mode_start"])
+        anomalies["beam_mode_end"] = pd.to_datetime(anomalies["beam_mode_end"])
         return anomalies
 
 
