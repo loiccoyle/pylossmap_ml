@@ -297,6 +297,8 @@ class AnomalyDetectionModel:
         if "timestamp_rel_bm" not in anomalies.columns:
             anomalies = self.add_fill_beammode_timings(anomalies)
 
+        anomalies = anomalies.sort_values("fill_number")
+
         fig = plt.figure(
             constrained_layout=True, figsize=kwargs.pop("figsize", (12, 3))
         )
