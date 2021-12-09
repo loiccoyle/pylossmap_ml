@@ -208,6 +208,16 @@ class AnomalyDetectionModel:
     def error(self) -> np.ndarray:
         return np.hstack([self.error_train, self.error_val])
 
+    def drop_fill(self, fill_number: int) -> None:
+        self._metadata_val = self.metadata_val[
+            self.metadata_val["fill_number"] != fill_number
+        ]
+        self._metadata_train = self.metadata_train[
+            self.metadata_train["fill_number"] != fill_number
+        ]
+        self._error_val = self.metadata_val["MSE"]
+        self._error_train = self.metadata_train["MSE"]
+
     def add_fill_beammode_timings(
         self, anomalies: Optional[pd.DataFrame] = None
     ) -> pd.DataFrame:
@@ -240,7 +250,7 @@ class AnomalyDetectionModel:
         anomalies["beam_mode_start"] = pd.to_datetime(anomalies["beam_mode_start"])
         anomalies["beam_mode_end"] = pd.to_datetime(anomalies["beam_mode_end"])
         anomalies["timestamp_rel_bm"] = (
-            anomalies["timestamp"] - anomalies["beam_mode_start"] 
+            anomalies["timestamp"] - anomalies["beam_mode_start"]
         ) / (anomalies["beam_mode_end"] - anomalies["beam_mode_start"])
         return anomalies
 
