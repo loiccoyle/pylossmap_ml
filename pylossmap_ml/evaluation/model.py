@@ -208,7 +208,7 @@ class AnomalyDetectionModel:
     def error(self) -> np.ndarray:
         return np.hstack([self.error_train, self.error_val])
 
-    def add_relative_fill_timings(
+    def add_fill_beammode_timings(
         self, anomalies: Optional[pd.DataFrame] = None
     ) -> pd.DataFrame:
         if anomalies is None:
