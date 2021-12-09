@@ -281,7 +281,7 @@ class AnomalyDetectionModel:
         return BLMData.load(self.raw_data_path / f"{fill}.h5")
 
     def plot_anomaly_fill_timings(
-        self, anomalies: Optional[pd.DataFrame], **kwargs
+        self, anomalies: Optional[pd.DataFrame] = None, **kwargs
     ) -> Tuple[plt.Figure, List[plt.Axes]]:
         """Plot the distribution of the anomalies in the beam mode of each fill.
 
