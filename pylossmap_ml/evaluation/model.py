@@ -273,7 +273,7 @@ class AnomalyDetectionModel:
         if anomalies is None:
             anomalies = self.anomalies
         return (
-            anomalies.groupby("fill_number").count()["fill_number"].plot.pie(**kwargs)
+            anomalies.groupby("fill_number")["fill_number"].count().plot.pie(**kwargs)
         )
 
     def plot_sample(self, fill: int, timestamp: pd.Timestamp, around: int = 1):
