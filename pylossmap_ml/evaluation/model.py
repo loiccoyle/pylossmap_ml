@@ -243,6 +243,16 @@ class AnomalyDetectionModel:
             raise ValueError("No 'raw_data_path' provided.")
         return BLMData.load(self.raw_data_path / f"{fill}.h5")
 
+    def plot_anomaly_fills(
+        self, anomalies: Optional[pd.DataFrame] = None, **kwargs
+    ) -> plt.Axes:
+
+        if anomalies is None:
+            anomalies = self.anomalies
+        return (
+            anomalies.groupby("fill_number").count()["fill_number"].plot.pie(**kwargs)
+        )
+
     def plot_sample(self, fill: int, timestamp: pd.Timestamp, around: int = 1):
         """Plot the raw data of a timestamp.
 
