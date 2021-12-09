@@ -215,12 +215,12 @@ class AnomalyDetectionModel:
             anomalies = self.anomalies.copy()
 
         beam_mode = anomalies["beam_mode"].iloc[0]
-            fill_info = DB.getLHCFillData(fill_number)
         for fill_number in anomalies["fill_number"].unique():
+            fill_info = DB.getLHCFillData(fill_number)
             for mode in fill_info["beamModes"]:
                 if mode["mode"] == beam_mode:
-                    mode_start = pd.to_datetime(mode["startTime"], unit="s")
-                    mode_end = pd.to_datetime(mode["endTime"], unit="s")
+                    mode_start = pd.to_datetime(mode["startTime"], unit="s", utc=True)
+                    mode_end = pd.to_datetime(mode["endTime"], unit="s", utc=True)
             anomalies.loc[anomalies["fill_number"] == fill_number, "beam_mode_start"] = mode_start
             anomalies.loc[anomalies["fill_number"] == fill_number, "beam_mode_end"] = mode_end
         return anomalies
