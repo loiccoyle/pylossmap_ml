@@ -273,7 +273,7 @@ class AnomalyDetectionModel:
         if threshold is not None:
             ax.axvline(threshold)
         ax.legend()
-        return fig, ax
+        return fig, ax, bins
 
     def load_raw_data_fill(self, fill: int) -> BLMData:
         if self.raw_data_path is None:
