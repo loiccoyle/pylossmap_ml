@@ -10,6 +10,7 @@ from keras.models import load_model
 from pylossmap import BLMData
 from tqdm.auto import tqdm
 
+from ..db import DB
 from ..training.generator import DataGenerator
 
 logger = logging.getLogger(__name__)
@@ -206,6 +207,24 @@ class AnomalyDetectionModel:
     @property
     def error(self) -> np.ndarray:
         return np.hstack([self.error_train, self.error_val])
+
+    def add_relative_fill_timings(
+        self, anomalies: Optional[pd.DataFrame] = None
+    ) -> pd.DataFrame:
+        if anomalies is None:
+            anomalies = self.anomalies.copy()
+
+        beam_mode = anomalies["beam_mode"].iloc[0]
+            fill_info = DB.getLHCFillData(fill_number)
+        for fill_number in anomalies["fill_number"].unique():
+            for mode in fill_info["beamModes"]:
+                if mode["mode"] == beam_mode:
+                    mode_start = pd.to_datetime(mode["startTime"], unit="s")
+                    mode_end = pd.to_datetime(mode["endTime"], unit="s")
+            anomalies.loc[anomalies["fill_number"] == fill_number, "beam_mode_start"] = mode_start
+            anomalies.loc[anomalies["fill_number"] == fill_number, "beam_mode_end"] = mode_end
+        return anomalies
+
 
     def threshold_from_quantile(
         self, quantile: float = 0.99, datasets: Union[List[str], str] = ["train", "val"]
