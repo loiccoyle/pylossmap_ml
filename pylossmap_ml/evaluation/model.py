@@ -215,7 +215,7 @@ class AnomalyDetectionModel:
             anomalies = self.anomalies.copy()
 
         beam_mode = anomalies["beam_mode"].iloc[0]
-        for fill_number in anomalies["fill_number"].unique():
+        for fill_number in tqdm(anomalies["fill_number"].unique()):
             fill_info = DB.getLHCFillData(fill_number)
             for mode in fill_info["beamModes"]:
                 if mode["mode"] == beam_mode:
