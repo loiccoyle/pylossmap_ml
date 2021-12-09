@@ -222,8 +222,8 @@ class AnomalyDetectionModel:
             logger.debug("Fill info: %s", fill_info)
             for mode in fill_info["beamModes"]:
                 if mode["mode"] == beam_mode:
-                    mode_start = pd.to_datetime(mode["startTime"], unit="s", utc=True)
-                    mode_end = pd.to_datetime(mode["endTime"], unit="s", utc=True)
+                    mode_start = pd.to_datetime(mode["startTime"], unit="s", utc=True).tz_convert("Europe/Zurich")
+                    mode_end = pd.to_datetime(mode["endTime"], unit="s", utc=True).tz_convert("Europe/Zurich")
 
                     anomalies.loc[anomalies["fill_number"] == fill_number, "beam_mode_start"] = mode_start
                     anomalies.loc[anomalies["fill_number"] == fill_number, "beam_mode_end"] = mode_end
