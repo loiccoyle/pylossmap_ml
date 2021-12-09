@@ -26,7 +26,7 @@ class AnomalyDetectionModel:
         """
         if not isinstance(save_path, Path):
             save_path = Path(save_path)
-        logger.debug("Loading kwargs.")
+        logger.info("Loading kwargs.")
         with open(save_path / "evaluation_kwargs.json", "r") as fp:
             kwargs = json.load(fp)
         if kwargs["model_path"] is not None:
@@ -35,13 +35,13 @@ class AnomalyDetectionModel:
             kwargs["raw_data_path"] = Path(kwargs["raw_data_path"])
 
         out = cls(**kwargs)
-        logger.debug("Loading metadata train.")
+        logger.info("Loading metadata train.")
         out._metadata_train = pd.read_hdf(save_path / "metadata_train.h5", "data")
-        logger.debug("Loading metadata val.")
+        logger.info("Loading metadata val.")
         out._metadata_val = pd.read_hdf(save_path / "metadata_val.h5", "data")
-        logger.debug("Loading error train.")
+        logger.info("Loading error train.")
         out._error_train = np.load(save_path / "error_train.npy")
-        logger.debug("Loading error val.")
+        logger.info("Loading error val.")
         out._error_val = np.load(save_path / "error_val.npy")
         return out
 
@@ -383,16 +383,16 @@ class AnomalyDetectionModel:
             key: str(value) if value is not None else value
             for key, value in save_dict.items()
         }
-        logger.debug("Saving kwargs.")
+        logger.info("Saving kwargs.")
         with open(save_path / "evaluation_kwargs.json", "w") as fp:
             json.dump(save_dict, fp)
 
         for attribute in np_attributes:
-            logger.debug(f"Saving {attribute}.")
+            logger.info(f"Saving {attribute}.")
             np_array = getattr(self, attribute)
             np.save(save_path / f"{attribute}.npy", np_array)
 
         for attribute in df_attributes:
-            logger.debug(f"Saving {attribute}.")
+            logger.info(f"Saving {attribute}.")
             df = getattr(self, attribute)
             df.to_hdf(save_path / f"{attribute}.h5", "data")
