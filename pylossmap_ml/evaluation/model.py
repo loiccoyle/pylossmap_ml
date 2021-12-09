@@ -215,8 +215,11 @@ class AnomalyDetectionModel:
             anomalies = self.anomalies.copy()
 
         beam_mode = anomalies["beam_mode"].iloc[0]
+        logger.info("Using beam mode: %s", beam_mode)
         for fill_number in tqdm(anomalies["fill_number"].unique()):
+            logger.debug("Fill number: %i", fill_number)
             fill_info = DB.getLHCFillData(fill_number)
+            logger.debug("Fill info: %s", fill_info)
             for mode in fill_info["beamModes"]:
                 if mode["mode"] == beam_mode:
                     mode_start = pd.to_datetime(mode["startTime"], unit="s", utc=True)
