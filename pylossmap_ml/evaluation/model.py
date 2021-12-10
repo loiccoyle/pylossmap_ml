@@ -200,7 +200,7 @@ class AnomalyDetectionModel:
             assert self.error_train is not None
         if self._error_val is None:
             assert self.error_val is not None
-        anomalies = self.metadata[self.metadata["MSE"] > self.threshold]
+        anomalies = self.metadata[self.metadata["MSE"] >= self.threshold]
         anomalies.sort_values("MSE", ascending=False, inplace=True)
         return anomalies
 
@@ -327,9 +327,29 @@ class AnomalyDetectionModel:
         axes[1].set_xlabel("Count")
         return fig, axes
 
+    def plot_history(self, **kwargs) -> plt.Axes:
+        """Plot the training history.
+
+        Args:
+            kwargs: passed to `pd.DataFrame.plot`.
+
+        Returns:
+            The plotted `plt.Axes`.
+        """
+        return pd.DataFrame(self.history).plot(**kwargs)
+
     def plot_anomaly_fills(
         self, anomalies: Optional[pd.DataFrame] = None, **kwargs
     ) -> plt.Axes:
+        """Plot the distribution of the number of events among fills in a pie plot.
+
+        Args:
+            anomalies: DataFrame of the anomalies.
+            kwargs: passed to `pd.DataFrame.plot.pie`.
+
+        Returns:
+            The plotter `plt.Axes`.
+        """
 
         if anomalies is None:
             anomalies = self.anomalies
