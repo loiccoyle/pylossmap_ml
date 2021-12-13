@@ -343,9 +343,11 @@ class AnomalyDetectionModel:
         if ufo_metadata is None:
             ufo_metadata = self.load_ufo_metadata(**kwargs)
 
+        dt = pd.Timedelta(dt)
+
         ufos = ufo_metadata[
-            (ufo_metadata["datetime"] > (timestamp - pd.Timedelta(dt)))
-            & (ufo_metadata["datetime"] < (timestamp + pd.Timedelta(dt)))
+            (ufo_metadata["datetime"] > (timestamp - dt))
+            & (ufo_metadata["datetime"] < (timestamp + dt))
         ]
         return ufos
 
