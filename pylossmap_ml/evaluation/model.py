@@ -1,5 +1,6 @@
 import json
 import logging
+import random
 from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
@@ -12,6 +13,10 @@ from tqdm.auto import tqdm
 
 from ..db import DB
 from ..training.generator import DataGenerator
+
+UFO_METADATA_FILE = Path(
+    "/nfs/cs-ccr-adtobsnfs/lhc_adtobsbox_data/lcoyle/lossmap_data/lossmap_data/ufo_metadata/2018/ufo_metadata.h5"
+)
 
 logger = logging.getLogger(__name__)
 
@@ -221,6 +226,16 @@ class AnomalyDetectionModel:
     def add_fill_beammode_timings(
         self, anomalies: Optional[pd.DataFrame] = None
     ) -> pd.DataFrame:
+        """Add the beam mode start and end timings for each fill.
+
+        Args:
+            anomalies: The anomaly `pd.DataFrame`.
+
+        Returns:
+            The anomaly dataframe with beam mode timing info added in the
+                'beam_mode_start', 'beam_mode_end' and 'timestamp_rel_bm' columns.
+
+        """
         if anomalies is None:
             anomalies = self.anomalies.copy()
 
@@ -254,6 +269,43 @@ class AnomalyDetectionModel:
         ) / (anomalies["beam_mode_end"] - anomalies["beam_mode_start"])
         return anomalies
 
+    def add_ufo_check(
+        self,
+        anomalies: Optional[pd.DataFrame] = None,
+        ufo_metadata: Optional[pd.DataFrame] = None,
+        dt: str = "1s",
+        **kwargs,
+    ) -> pd.DataFrame:
+        """Add presence in UFO metadata information to anomaly DataFrame.
+
+        Args:
+            anomalies: The anomaly `pd.DataFrame`.
+            ufo_metadata: The ufo metadat `pd.DataFrame`.
+            dt: `pd.Timedelta` string describing the delta t around the timestamp
+                to consider as being a matching UFO.
+
+        Returns:
+            The anomaly DataFrame with UFO info added.
+        """
+        if anomalies is None:
+            anomalies = self.anomalies.copy()
+
+        if ufo_metadata is None:
+            ufo_metadata = self.load_ufo_metadata(**kwargs)
+
+        def ufo_check_func(row: pd.Series) -> bool:
+            return (
+                len(
+                    self.check_ufo_around(
+                        row.timestamp, dt=dt, ufo_metadata=ufo_metadata
+                    )
+                )
+                > 0
+            )
+
+        anomalies["in_ufo_db"] = anomalies.apply(ufo_check_func, axis=1)
+        return anomalies
+
     def threshold_from_quantile(
         self, quantile: float = 0.99, datasets: Union[List[str], str] = ["train", "val"]
     ):
@@ -270,6 +322,73 @@ class AnomalyDetectionModel:
             datasets = list(datasets)
         datasets = np.hstack([getattr(self, "error_" + dset) for dset in datasets])
         return np.quantile(datasets, quantile)
+
+    def check_ufo_around(
+        self,
+        timestamp: pd.Timestamp,
+        dt: str,
+        ufo_metadata: Optional[pd.DataFrame],
+        **kwargs,
+    ) -> pd.DataFrame:
+        """Check if `timestamp` is in the `ufo_metadata` DataFrame within `dt`.
+
+        Args:
+            timestamp: The timestamp to check.
+            dt: The delta t allowed around `timestamp`.
+            ufo_metadata: The UFO metadata DataFrame.
+
+        Returns:
+            The UFOs within `timestamp` ± `dt`.
+        """
+        if ufo_metadata is None:
+            ufo_metadata = self.load_ufo_metadata(**kwargs)
+
+        ufos = ufo_metadata[
+            (ufo_metadata["datetime"] > (timestamp - pd.Timedelta(dt)))
+            & (ufo_metadata["datetime"] < (timestamp + pd.Timedelta(dt)))
+        ]
+        return ufos
+
+    def load_ufo_metadata(
+        self,
+        ufo_metadata_path: Path = UFO_METADATA_FILE,
+        beam_mode: str = "STABLE",
+        particle: str = "protons",
+        only_straight_section: bool = False,
+    ) -> pd.DataFrame:
+        """Load the UFO metadata and apply relevant filtering.
+
+        Args:
+            ufo_metadata_path: the path to the hdf file containing the UFO metadata.
+            beam_mode: Filter based on beam mode.
+            particle: filter based on particle type.
+            only_straight_section: Only keep UFOs which occur in the straight sections.
+
+        Returns:
+            The UFO metadata DataFrame.
+        """
+        ufo_metadata = pd.read_hdf(ufo_metadata_path)
+        ufo_metadata = ufo_metadata[ufo_metadata["beam_mode"] == beam_mode]
+        ufo_metadata = ufo_metadata[ufo_metadata["particle_b1"] == particle]
+        ufo_metadata = ufo_metadata[ufo_metadata["particle_b2"] == particle]
+        ufo_metadata = ufo_metadata[
+            ufo_metadata["fill"].isin(self.metadata["fill_number"].unique())
+        ]
+        ufo_metadata["datetime"] = ufo_metadata["datetime"].dt.tz_localize(
+            "Europe/Zurich"
+        )
+        if only_straight_section:
+            if self.raw_data_path is None:
+                raise ValueError(
+                    "'raw_data_path' required for 'only_straight_section' filtering."
+                )
+            random_raw_data_file = random.choice(list(self.raw_data_path.glob("*.h5")))
+            blm_data = BLMData.load(random_raw_data_file)
+            blm_data = blm_data.cell(*range(12, 33 + 1))
+            arc_blms = blm_data.df.columns.to_list()
+            arc_blms_in_ufo = list(set(arc_blms) & set(ufo_metadata.index.unique()))
+            ufo_metadata = ufo_metadata.loc[arc_blms_in_ufo]
+        return ufo_metadata
 
     def plot_error(
         self, n_bins: int = 100, threshold: Optional[float] = None
