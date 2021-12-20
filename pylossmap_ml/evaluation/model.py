@@ -429,7 +429,7 @@ class AnomalyDetectionModel:
             closest_row_time = closest_row.name
             if abs(closest_row_time - row["datetime"]) > allowed_dt:
                 raise ValueError(
-                    f"Ufo to metadata delta t to high. ufo {closest_row_time} -> metadata {row_time}"
+                    f"Ufo to metadata delta t to high. ufo {row_time} -> metadata {closest_row_time}"
                 )
             return closest_row["MSE"]
 
