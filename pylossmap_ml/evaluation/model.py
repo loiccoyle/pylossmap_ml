@@ -439,7 +439,7 @@ class AnomalyDetectionModel:
                 metadata.index.get_loc(row_time, method="nearest")
             ]
             closest_row_time = closest_row.name
-            if abs(closest_row_time - row["datetime"]) > allowed_dt:
+            if abs(closest_row_time - row_time) > allowed_dt:
                 msg = f"Ufo to metadata delta t to high. ufo {row_time} -> metadata {closest_row_time}"
                 if raise_when_dt_high:
                     ValueError(msg)
