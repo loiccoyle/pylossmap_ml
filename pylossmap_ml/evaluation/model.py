@@ -511,15 +511,16 @@ class AnomalyDetectionModel:
         axes[1].hist(anomalies["timestamp_rel_bm"], orientation="horizontal")
         axes[1].set_xlabel("Count")
 
+        minutes_since_start = anomalies["time_since_bm_start"].dt.seconds / 60
         axes[2].scatter(
             anomalies["fill_number"].apply(str),
-            anomalies["time_since_bm_start"],
+            minutes_since_start,
             **kwargs,
         )
         axes[2].tick_params(axis="x", labelrotation=45)
-        axes[2].set_ylabel("Time since the start of the beam mode")
+        axes[2].set_ylabel("Time since the start of the beam mode (minutes)")
         axes[2].set_xlabel("Fill number")
-        axes[2].hist(anomalies["time_since_bm_start"], orientation="horizontal")
+        axes[2].hist(minutes_since_start, orientation="horizontal")
         axes[2].set_xlabel("Count")
         return fig, axes
 
