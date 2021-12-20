@@ -435,7 +435,7 @@ class AnomalyDetectionModel:
         def get_anomaly_score(row):
             row_time = row["datetime"]
             closest_row = metadata.iloc[
-                metadata.index.get_loc(row_time, method="nearest")
+                metadata.index.get_loc(row_time - pd.Timedelta("1s"), method="nearest")
             ]
             closest_row_time = closest_row.name
             if abs(closest_row_time - row["datetime"]) > allowed_dt:
