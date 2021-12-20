@@ -241,7 +241,9 @@ class AnomalyDetectionModel:
 
         beam_mode = anomalies["beam_mode"].iloc[0]
         logger.info("Using beam mode: %s", beam_mode)
-        for fill_number in tqdm(anomalies["fill_number"].unique()):
+        for fill_number in tqdm(
+            anomalies["fill_number"].unique(), desc="Fetching fill info"
+        ):
             fill_info = DB.getLHCFillData(int(fill_number))
             logger.debug("Fill number: %i", fill_number)
             logger.debug("Fill info: %s", fill_info)
