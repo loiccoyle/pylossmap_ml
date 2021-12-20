@@ -433,9 +433,10 @@ class AnomalyDetectionModel:
         metadata = metadata.sort_index()
 
         def get_anomaly_score(row):
-            row_time = row["datetime"]
+            # There looks to be a consistent 1s shift
+            row_time = row["datetime"] - pd.Timedelta("1s")
             closest_row = metadata.iloc[
-                metadata.index.get_loc(row_time - pd.Timedelta("1s"), method="nearest")
+                metadata.index.get_loc(row_time, method="nearest")
             ]
             closest_row_time = closest_row.name
             if abs(closest_row_time - row["datetime"]) > allowed_dt:
