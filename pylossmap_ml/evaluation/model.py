@@ -376,9 +376,14 @@ class AnomalyDetectionModel:
         ufo_metadata = ufo_metadata[
             ufo_metadata["fill"].isin(self.metadata["fill_number"].unique())
         ]
-        ufo_metadata["datetime"] = ufo_metadata["datetime"].dt.tz_localize(
-            "Europe/Zurich"
-        )
+        try:
+            ufo_metadata["datetime"] = ufo_metadata["datetime"].dt.tz_localize(
+                "Europe/Zurich"
+            )
+        except TypeError:
+            logger.info("Ufo metadata already contains timezone info.")
+            pass
+
         if only_straight_section:
             if self.raw_data_path is None:
                 raise ValueError(
