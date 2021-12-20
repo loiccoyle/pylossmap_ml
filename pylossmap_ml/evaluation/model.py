@@ -485,7 +485,7 @@ class AnomalyDetectionModel:
         if anomalies is None:
             anomalies = self.anomalies
         if (
-            "time_rel_bm" not in anomalies.columns
+            "timestamp_rel_bm" not in anomalies.columns
             or "time_since_bm_start" not in anomalies.columns
         ):
             anomalies = self.add_fill_beammode_timings(anomalies)
