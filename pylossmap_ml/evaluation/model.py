@@ -520,8 +520,8 @@ class AnomalyDetectionModel:
         axes[2].tick_params(axis="x", labelrotation=45)
         axes[2].set_ylabel("Time since the start of the beam mode (minutes)")
         axes[2].set_xlabel("Fill number")
-        axes[2].hist(minutes_since_start, orientation="horizontal")
-        axes[2].set_xlabel("Count")
+        axes[3].hist(minutes_since_start, orientation="horizontal")
+        axes[3].set_xlabel("Count")
         return fig, axes
 
     def plot_history(self, **kwargs) -> plt.Axes:
