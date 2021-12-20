@@ -410,6 +410,7 @@ class AnomalyDetectionModel:
         ufo_metadata: Optional[pd.DataFrame] = None,
         allowed_dt: str = "1s",
         raise_when_dt_high: bool = False,
+        ufo_to_datashift: str = "1s",
         **kwargs,
     ) -> pd.DataFrame:
         """Lookup the error scores for the UFOs in the `ufo_metadata` dataframe.
@@ -433,11 +434,10 @@ class AnomalyDetectionModel:
         metadata = metadata.sort_index()
 
         def get_anomaly_score(row):
-            # There looks to be a consistent 1s shift
-            row_time = row["datetime"] - pd.Timedelta("1s")
-            closest_row = metadata.iloc[
-                metadata.index.get_loc(row_time, method="nearest")
-            ]
+            # There looks to be a consistent shift
+            row_time = row["datetime"] + pd.Timedelta(ufo_to_datashift)
+            closest_row_index = metadata.index.get_loc(row_time, method="nearest")
+            closest_row = metadata.iloc[closest_row_index]
             closest_row_time = closest_row.name
             if abs(closest_row_time - row_time) > allowed_dt:
                 msg = f"Ufo to metadata delta t to high. ufo {row_time} -> metadata {closest_row_time}"
@@ -447,9 +447,11 @@ class AnomalyDetectionModel:
                     logger.warning(msg)
                     return None
 
-            return closest_row["MSE"]
+            row["mse"] = closest_row["MSE"]
+            row["metadata_index"] = closest_row_index
+            return row
 
-        ufo_metadata["MSE"] = ufo_metadata.apply(get_anomaly_score, axis=1)
+        ufo_metadata = ufo_metadata.apply(get_anomaly_score, axis=1)
         return ufo_metadata
 
     def plot_error(
