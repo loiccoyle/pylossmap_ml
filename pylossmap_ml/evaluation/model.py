@@ -264,6 +264,12 @@ class AnomalyDetectionModel:
 
         anomalies["beam_mode_start"] = pd.to_datetime(anomalies["beam_mode_start"])
         anomalies["beam_mode_end"] = pd.to_datetime(anomalies["beam_mode_end"])
+        anomalies["time_since_bm_start"] = (
+            anomalies["timestamp"] - anomalies["beam_mode_start"]
+        )
+        anomalies["time_until_bm_end"] = (
+            anomalies["beam_mode_end"] - anomalies["timestamp"]
+        )
         anomalies["timestamp_rel_bm"] = (
             anomalies["timestamp"] - anomalies["beam_mode_start"]
         ) / (anomalies["beam_mode_end"] - anomalies["beam_mode_start"])
@@ -476,7 +482,10 @@ class AnomalyDetectionModel:
         """
         if anomalies is None:
             anomalies = self.anomalies
-        if "timestamp_rel_bm" not in anomalies.columns:
+        if (
+            "time_rel_bm" not in anomalies.columns
+            or "time_since_bm_start" not in anomalies.columns
+        ):
             anomalies = self.add_fill_beammode_timings(anomalies)
 
         anomalies = anomalies.sort_values("fill_number")
@@ -484,10 +493,12 @@ class AnomalyDetectionModel:
         fig = plt.figure(
             constrained_layout=True, figsize=kwargs.pop("figsize", (12, 3))
         )
-        gs = fig.add_gridspec(1, 4)
+        gs = fig.add_gridspec(2, 4)
         axes = []
         axes.append(fig.add_subplot(gs[0, :-1]))
         axes.append(fig.add_subplot(gs[0, -1:], sharey=axes[-1]))
+        axes.append(fig.add_subplot(gs[1, :-1]))
+        axes.append(fig.add_subplot(gs[1, -1:], sharey=axes[-1]))
 
         axes[0].scatter(
             anomalies["fill_number"].apply(str), anomalies["timestamp_rel_bm"], **kwargs
@@ -497,6 +508,17 @@ class AnomalyDetectionModel:
         axes[0].set_xlabel("Fill number")
         axes[1].hist(anomalies["timestamp_rel_bm"], orientation="horizontal")
         axes[1].set_xlabel("Count")
+
+        axes[2].scatter(
+            anomalies["fill_number"].apply(str),
+            anomalies["time_since_bm_start"],
+            **kwargs,
+        )
+        axes[2].tick_params(axis="x", labelrotation=45)
+        axes[2].set_ylabel("Time since the start of the beam mode")
+        axes[2].set_xlabel("Fill number")
+        axes[2].hist(anomalies["time_since_bm_start"], orientation="horizontal")
+        axes[2].set_xlabel("Count")
         return fig, axes
 
     def plot_history(self, **kwargs) -> plt.Axes:
