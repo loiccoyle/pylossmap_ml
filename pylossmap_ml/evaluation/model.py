@@ -410,6 +410,7 @@ class AnomalyDetectionModel:
             ufo_metadata: the ufo events metadata.
             allowed_dt: how far appart in time will the lookup allow.
         """
+        allowed_dt = pd.Timedelta(allowed_dt)
         if metadata is None:
             metadata = self.metadata
 
