@@ -356,7 +356,7 @@ class AnomalyDetectionModel:
         ufo_metadata_path: Path = UFO_METADATA_FILE,
         beam_mode: str = "STABLE",
         particle: str = "protons",
-        only_straight_section: bool = False,
+        only_arc_section: bool = False,
     ) -> pd.DataFrame:
         """Load the UFO metadata and apply relevant filtering.
 
@@ -364,7 +364,7 @@ class AnomalyDetectionModel:
             ufo_metadata_path: the path to the hdf file containing the UFO metadata.
             beam_mode: Filter based on beam mode.
             particle: filter based on particle type.
-            only_straight_section: Only keep UFOs which occur in the straight sections.
+            only_arc_section: Only keep UFOs which occur in the arc sections.
 
         Returns:
             The UFO metadata DataFrame.
@@ -383,10 +383,10 @@ class AnomalyDetectionModel:
         except TypeError:
             logger.info("Ufo metadata already contains timezone info.")
 
-        if only_straight_section:
+        if only_arc_section:
             if self.raw_data_path is None:
                 raise ValueError(
-                    "'raw_data_path' required for 'only_straight_section' filtering."
+                    "'raw_data_path' required for 'only_arc_section' filtering."
                 )
             random_raw_data_file = random.choice(list(self.raw_data_path.glob("*.h5")))
             blm_data = BLMData.load(random_raw_data_file)
