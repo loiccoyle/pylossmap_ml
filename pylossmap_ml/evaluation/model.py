@@ -396,6 +396,45 @@ class AnomalyDetectionModel:
             ufo_metadata = ufo_metadata.loc[arc_blms_in_ufo]
         return ufo_metadata
 
+    def ufo_metadata_error(
+        self,
+        metadata: Optional[pd.DataFrame] = None,
+        ufo_metadata: Optional[pd.DataFrame] = None,
+        allowed_dt: str = "1s",
+        **kwargs,
+    ) -> pd.DataFrame:
+        """Lookup the error scores for the UFOs in the `ufo_metadata` dataframe.
+
+        Args:
+            metadata: the dataset metadata.
+            ufo_metadata: the ufo events metadata.
+            allowed_dt: how far appart in time will the lookup allow.
+        """
+        if metadata is None:
+            metadata = self.metadata
+
+        if ufo_metadata is None:
+            ufo_metadata = self.load_ufo_metadata(**kwargs)
+
+        metadata = metadata[~metadata.duplicated("timestamp")]
+        metadata = metadata.set_index("timestamp")
+        metadata = metadata.sort_index()
+
+        def get_anomaly_score(row):
+            row_time = row["datetime"]
+            closest_row = metadata.iloc[
+                metadata.index.get_loc(row_time, method="nearest")
+            ]
+            closest_row_time = closest_row.name
+            if abs(closest_row_time - row["datetime"]) > allowed_dt:
+                raise ValueError(
+                    f"Ufo to metadata delta t to high. ufo {closest_row_time} -> metadata {row_time}"
+                )
+            return closest_row["MSE"]
+
+        ufo_metadata["MSE"] = ufo_metadata.apply(get_anomaly_score, axis=1)
+        return ufo_metadata
+
     def plot_error(
         self, n_bins: int = 100, threshold: Optional[float] = None
     ) -> Tuple[plt.Figure, plt.Axes, np.ndarray]:
