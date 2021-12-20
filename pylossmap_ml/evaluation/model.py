@@ -401,6 +401,7 @@ class AnomalyDetectionModel:
         metadata: Optional[pd.DataFrame] = None,
         ufo_metadata: Optional[pd.DataFrame] = None,
         allowed_dt: str = "1s",
+        raise_when_dt_high: bool = False,
         **kwargs,
     ) -> pd.DataFrame:
         """Lookup the error scores for the UFOs in the `ufo_metadata` dataframe.
@@ -409,6 +410,8 @@ class AnomalyDetectionModel:
             metadata: the dataset metadata.
             ufo_metadata: the ufo events metadata.
             allowed_dt: how far appart in time will the lookup allow.
+            raise_when_dt_high: when the dt is above `allowed_dt` raise error,
+                else a `None` is assigned to the row.
         """
         allowed_dt = pd.Timedelta(allowed_dt)
         if metadata is None:
@@ -428,9 +431,13 @@ class AnomalyDetectionModel:
             ]
             closest_row_time = closest_row.name
             if abs(closest_row_time - row["datetime"]) > allowed_dt:
-                raise ValueError(
-                    f"Ufo to metadata delta t to high. ufo {row_time} -> metadata {closest_row_time}"
-                )
+                msg = f"Ufo to metadata delta t to high. ufo {row_time} -> metadata {closest_row_time}"
+                if raise_when_dt_high:
+                    ValueError(msg)
+                else:
+                    logger.warning(msg)
+                    return None
+
             return closest_row["MSE"]
 
         ufo_metadata["MSE"] = ufo_metadata.apply(get_anomaly_score, axis=1)
