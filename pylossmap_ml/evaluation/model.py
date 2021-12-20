@@ -327,7 +327,7 @@ class AnomalyDetectionModel:
         self,
         timestamp: pd.Timestamp,
         dt: str,
-        ufo_metadata: Optional[pd.DataFrame],
+        ufo_metadata: Optional[pd.DataFrame] = None,
         **kwargs,
     ) -> pd.DataFrame:
         """Check if `timestamp` is in the `ufo_metadata` DataFrame within `dt`.
@@ -346,8 +346,8 @@ class AnomalyDetectionModel:
         dt = pd.Timedelta(dt)
 
         ufos = ufo_metadata[
-            (ufo_metadata["datetime"] > (timestamp - dt))
-            & (ufo_metadata["datetime"] < (timestamp + dt))
+            (ufo_metadata["datetime"] >= (timestamp - dt))
+            & (ufo_metadata["datetime"] <= (timestamp + dt))
         ]
         return ufos
 
@@ -382,7 +382,6 @@ class AnomalyDetectionModel:
             )
         except TypeError:
             logger.info("Ufo metadata already contains timezone info.")
-            pass
 
         if only_straight_section:
             if self.raw_data_path is None:
