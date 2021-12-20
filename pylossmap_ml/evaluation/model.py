@@ -242,7 +242,7 @@ class AnomalyDetectionModel:
         beam_mode = anomalies["beam_mode"].iloc[0]
         logger.info("Using beam mode: %s", beam_mode)
         for fill_number in tqdm(
-            anomalies["fill_number"].unique(), desc="Fetching fill info"
+            anomalies["fill_number"].unique(), desc="Fetching fille info"
         ):
             fill_info = DB.getLHCFillData(int(fill_number))
             logger.debug("Fill number: %i", fill_number)
@@ -493,7 +493,7 @@ class AnomalyDetectionModel:
         anomalies = anomalies.sort_values("fill_number")
 
         fig = plt.figure(
-            constrained_layout=True, figsize=kwargs.pop("figsize", (12, 3))
+            constrained_layout=True, figsize=kwargs.pop("figsize", (12, 6))
         )
         gs = fig.add_gridspec(2, 4)
         axes = []
