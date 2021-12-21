@@ -433,7 +433,7 @@ class AnomalyDetectionModel:
         metadata = metadata.set_index("timestamp")
         timestamp_index_map = pd.Series(range(len(metadata)), index=metadata.index)
         timestamp_index_map = timestamp_index_map.sort_index()
-        metadata = metadata.iloc[timestamp_index_map.values()]
+        metadata = metadata.iloc[timestamp_index_map.values]
 
         def get_anomaly_score(row):
             # There looks to be a consistent shift
