@@ -447,11 +447,11 @@ class AnomalyDetectionModel:
                     logger.warning(msg)
                     return None
 
-            row["mse"] = closest_row["MSE"]
-            row["metadata_index"] = closest_row_index
-            return row
+            return closest_row["MSE"], closest_row_index
 
-        ufo_metadata = ufo_metadata.apply(get_anomaly_score, axis=1)
+        ufo_metadata["MSE"], ufo_metadata["metadata_index"] = zip(
+            *ufo_metadata.apply(get_anomaly_score, axis=1)
+        )
         return ufo_metadata
 
     def plot_error(
