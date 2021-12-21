@@ -410,7 +410,7 @@ class AnomalyDetectionModel:
         ufo_metadata: Optional[pd.DataFrame] = None,
         allowed_dt: str = "1s",
         raise_when_dt_high: bool = False,
-        ufo_to_datashift: str = "1s",
+        ufo_to_data_shift: str = "1s",
         **kwargs,
     ) -> pd.DataFrame:
         """Lookup the error scores for the UFOs in the `ufo_metadata` dataframe.
@@ -421,6 +421,8 @@ class AnomalyDetectionModel:
             allowed_dt: how far appart in time will the lookup allow.
             raise_when_dt_high: when the dt is above `allowed_dt` raise error,
                 else a `None` is assigned to the row.
+            ufo_to_data_shift: there is a constant shift in time between the
+                dataset and the entries in the UFO database.
         """
         allowed_dt = pd.Timedelta(allowed_dt)
         if metadata is None:
@@ -437,7 +439,7 @@ class AnomalyDetectionModel:
 
         def get_anomaly_score(row):
             # There looks to be a consistent shift
-            row_time = row["datetime"] + pd.Timedelta(ufo_to_datashift)
+            row_time = row["datetime"] + pd.Timedelta(ufo_to_data_shift)
             closest_row_index = metadata.index.get_loc(row_time, method="nearest")
             closest_row = metadata.iloc[closest_row_index]
             closest_row_time = closest_row.name
