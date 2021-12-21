@@ -431,7 +431,9 @@ class AnomalyDetectionModel:
 
         metadata = metadata[~metadata.duplicated("timestamp")]
         metadata = metadata.set_index("timestamp")
-        metadata = metadata.sort_index()
+        timestamp_index_map = pd.Series(range(len(metadata)), index=metadata.index)
+        timestamp_index_map = timestamp_index_map.sort_index()
+        metadata = metadata.iloc[timestamp_index_map.values()]
 
         def get_anomaly_score(row):
             # There looks to be a consistent shift
@@ -447,10 +449,10 @@ class AnomalyDetectionModel:
                     logger.warning(msg)
                     return None
 
-            return closest_row["MSE"], closest_row_index
+            return closest_row["MSE"], timestamp_index_map.iloc[closest_row_index]
 
-        ufo_metadata["MSE"], ufo_metadata["metadata_index"] = zip(
-            *ufo_metadata.apply(get_anomaly_score, axis=1)
+        ufo_metadata[["MSE", "metadata_index"]] = ufo_metadata.apply(
+            get_anomaly_score, axis=1, result_type="expand"
         )
         return ufo_metadata
 
