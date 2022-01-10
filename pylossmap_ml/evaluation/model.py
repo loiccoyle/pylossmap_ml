@@ -245,6 +245,8 @@ class AnomalyDetectionModel:
             anomalies["fill_number"].unique(), desc="Fetching fill info"
         ):
             fill_info = DB.getLHCFillData(int(fill_number))
+            if fill_info is None:
+                raise TypeError("Failed to fetch LHC fill data, 'fill_info' is None.")
             logger.debug("Fill number: %i", fill_number)
             logger.debug("Fill info: %s", fill_info)
             for mode in fill_info["beamModes"]:
