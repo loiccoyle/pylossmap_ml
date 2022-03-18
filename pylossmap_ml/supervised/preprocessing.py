@@ -352,7 +352,6 @@ def create_full_lm_dataset(
                         f"{post_dt}s"
                     )
                     non_ufo_prior_dataset_meta.append(prior_meta)
-                    ufo_dataset_meta.append(prior_meta)
     out = {
         "ufo": np.vstack(ufo_dataset),
         "non_ufo_prior": np.vstack(non_ufo_prior_dataset),
