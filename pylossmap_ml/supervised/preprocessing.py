@@ -471,8 +471,11 @@ class DataGenerator:
         out += self._norm_factors["means"]
         return out
 
+    def _pre_norm(self, data: np.ndarray) -> np.ndarray:
+        return np.log10(data)
+
     def pre_norm(self) -> "DataGenerator":
-        self.data = np.log10(self.data)
+        self.data = self._pre_norm(self.data)
         return self
 
     def shuffle(self) -> "DataGenerator":
@@ -495,11 +498,15 @@ class DataGenerator:
         self.data = self._unnorm_func(self.data)
         return self
 
-    def expand(self) -> "DataGenerator":
-        n_expand = max(self.ndim - self.data.ndim, 0)
+    def _expand(self, data: np.ndarray) -> np.ndarray:
+        n_expand = max(self.ndim - data.ndim, 0)
         if n_expand > 0:
             self._log.info("Expanding the dimensions by: %i", n_expand)
-            self.data = self.data[(..., *([np.newaxis] * n_expand))]
+            data = data[(..., *([np.newaxis] * n_expand))]
+        return data
+
+    def expand(self) -> "DataGenerator":
+        self.data = self._expand(self.data)
         return self
 
     def split(self, ratio: float) -> Tuple["DataGenerator", "DataGenerator"]:
