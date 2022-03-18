@@ -1,3 +1,4 @@
+import json
 import logging
 from pathlib import Path
 from typing import Optional, Tuple
@@ -25,6 +26,8 @@ class SupervisedModel:
         self.raw_data_dir = raw_data_dir
         self.model = load_model(self.model_path)
         self.generator = DataGenerator.load(self.generator_path)
+        with open(model_path / "history.json") as fp:
+            self.history = json.load(fp)
         self._pred = None
         self._log = logging.getLogger(__name__)
 
@@ -93,7 +96,7 @@ class SupervisedModel:
             meta_class = meta_class.iloc[sample_indices]
 
         for data, (_, meta) in zip(data_class, meta_class.iterrows()):
-            fig, axes = plt.subplots(1, 1)
+            fig, axes = plt.subplots(1, 1, figsize=(6, 3))
             axes.plot(data)
             axes.set_title("Processed data")
             raw_fill_data = metadata.load_raw_fill(
@@ -121,7 +124,7 @@ class SupervisedModel:
         blm_dcum = lossmap.df["dcum"]
         #     plot_labels = (lm_pred.squeeze().argmax(axis=1) * 0.01) + 0.001
         ufo_certainty = rolling_pred.squeeze()[:, 0]
-        non_ufo_certainty = rolling_pred.squeeze()[:, 1]
+        # non_ufo_certainty = rolling_pred.squeeze()[:, 1]
 
         fig, ax = plt.subplots(2, figsize=(16, 5), sharex=True)
         #     plt.figure(figsize=(16, 4))
@@ -136,4 +139,12 @@ class SupervisedModel:
         ax[1].set_xlabel("dcum [cm]")
         ax[1].set_ylabel("UFO probablity")
 
+        return fig, ax
+
+    def plot_history(self) -> Tuple[plt.Figure, plt.Axes]:
+        """Plot the training history."""
+        fig, ax = plt.subplots(1, 1)
+        ax.plot(self.history["loss"], label="loss")
+        ax.plot(self.history["val_loss"], label="val_loss")
+        ax.legend()
         return fig, ax
