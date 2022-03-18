@@ -1,6 +1,14 @@
 from typing import List, Optional
 
-from tensorflow.keras.layers import Conv1D, Conv1DTranspose, Dropout, Input
+from tensorflow.keras.layers import (
+    BatchNormalization,
+    Conv1D,
+    Conv1DTranspose,
+    Dropout,
+    Input,
+    MaxPooling1D,
+    UpSampling1D,
+)
 from tensorflow.keras.models import Sequential
 
 
@@ -17,9 +25,12 @@ def create_model(
     decoder_sizes: Optional[List[int]] = [16, 1],
     decoder_strides: Optional[List[int]] = None,
     decoder_dropout: Optional[float] = None,
+    max_pool_sizes: Optional[List[int]] = None,
+    upsampling_sizes: Optional[List[int]] = None,
+    batch_norm: bool = False,
+    decode_with_conv1d: bool = True,
 ):
     """Create a Convolutional AutoEncoder anomaly detection model.
-
 
     Note:
         The returned model is uncompiled, to compile:
@@ -34,6 +45,10 @@ def create_model(
         decoder_strides = encoder_strides[::-1]
     if decoder_kernel_sizes is None:
         decoder_kernel_sizes = encoder_kernel_sizes[::-1]
+    if decode_with_conv1d:
+        DecodeConvLayer = Conv1D
+    else:
+        DecodeConvLayer = Conv1DTranspose
 
     layers = [Input(shape=(sequence_length, n_features))]
     for i, (kernel_size, layer_size, stride) in enumerate(
@@ -47,6 +62,11 @@ def create_model(
             activation=activation,
         )
         layers.append(encoder_layer)
+        if batch_norm:
+            layers.append(BatchNormalization())
+        if max_pool_sizes is not None:
+            max_pool = MaxPooling1D(pool_size=max_pool_sizes[i])
+            layers.append(max_pool)
         if encoder_dropout is not None and i != len(encoder_sizes) - 1:
             # don't add a dropout after the last encoder layer
             encoder_dropout_layer = Dropout(encoder_dropout)
@@ -60,7 +80,7 @@ def create_model(
         else:
             layer_activation = activation_last_layer
 
-        decoder_layer = Conv1DTranspose(
+        decoder_layer = DecodeConvLayer(
             filters=layer_size,
             kernel_size=kernel_size,
             padding="same",
@@ -68,6 +88,11 @@ def create_model(
             activation=layer_activation,
         )
         layers.append(decoder_layer)
+        if batch_norm:
+            layers.append(BatchNormalization())
+        if upsampling_sizes is not None and i != len(upsampling_sizes) - 1:
+            upsample = UpSampling1D(size=upsampling_sizes[i])
+            layers.append(upsample)
         if decoder_dropout is not None and i != len(decoder_sizes) - 1:
             # don't add a dropout after the last decoder layer
             decoder_dropout_layer = Dropout(decoder_dropout)
