@@ -11,12 +11,7 @@ from sklearn.metrics import confusion_matrix
 from tensorflow.keras.models import load_model
 
 from . import metadata
-from .preprocessing import (
-    NON_UFO_LABEL_ARGMAX,
-    UFO_LABEL_ARGMAX,
-    DataGenerator,
-    rolling_window,
-)
+from .preprocessing import NON_UFO_LABEL, UFO_LABEL, DataGenerator, rolling_window
 
 
 class SupervisedModel:
@@ -40,17 +35,17 @@ class SupervisedModel:
     def confusion_matrix(self) -> np.ndarray:
         """Compute the confusion matrix."""
         return confusion_matrix(
-            self.generator.labels.squeeze().argmax(axis=1),
-            self.pred.squeeze().argmax(axis=1),
+            self.generator.labels.squeeze().round(),
+            self.pred.squeeze().round(),
         )
 
     def select(
-        self, label_class: int, pred_class: int
+        self, true_class: int, pred_class: int
     ) -> Tuple[np.ndarray, pd.DataFrame]:
-        labels_am = self.generator.labels.squeeze().argmax(axis=1)
-        pred_am = self.pred.squeeze().argmax(axis=1)
+        labels_am = self.generator.labels.squeeze().round()
+        pred_am = self.pred.squeeze().round()
 
-        label_class_mask = labels_am == label_class
+        label_class_mask = labels_am == true_class
         pred_class_mask = pred_am == pred_class
         class_mask = np.logical_and(label_class_mask, pred_class_mask)
 
@@ -85,9 +80,9 @@ class SupervisedModel:
         return lm_data, self.model.predict(lm_data_np)
 
     def _plot_class(
-        self, label_class: int, pred_class: int, n_sample: Optional[int] = None
+        self, true_class: int, pred_class: int, n_sample: Optional[int] = None
     ):
-        data_class, meta_class = self.select(label_class, pred_class)
+        data_class, meta_class = self.select(true_class, pred_class)
         if n_sample is not None:
             sample_indices = np.random.choice(
                 np.arange(len(data_class)), n_sample, replace=False
@@ -106,24 +101,41 @@ class SupervisedModel:
             metadata.plot_ufo_box(ufo_data, meta.dcum)
             plt.show()
 
+    def plot_confusion_matrix(self) -> Tuple[plt.Axes, plt.Figure]:
+        """Compute and plot the confusion matrix.
+
+        Returns:
+            The `plt.Axes` and `plt.Figure` objects.
+        """
+        conf_mat = self.confusion_matrix()
+        fig, ax = plt.subplots(1, 1)
+        ax.imshow(conf_mat)
+        ax.set_xlabel("Predicted label")
+        ax.set_ylabel("True label")
+        for (j, i), label in np.ndenumerate(conf_mat):
+            ax.text(i, j, label, ha="center", va="center")
+        ax.set_xticks([0, 1])
+        ax.set_yticks([0, 1])
+        return fig, ax
+
     def plot_ufos(self, n_sample: Optional[int] = None):
-        self._plot_class(UFO_LABEL_ARGMAX, UFO_LABEL_ARGMAX, n_sample=n_sample)
+        self._plot_class(UFO_LABEL, UFO_LABEL, n_sample=n_sample)
 
     def plot_non_ufos(self, n_sample: Optional[int] = None):
-        self._plot_class(NON_UFO_LABEL_ARGMAX, NON_UFO_LABEL_ARGMAX, n_sample=n_sample)
+        self._plot_class(NON_UFO_LABEL, NON_UFO_LABEL, n_sample=n_sample)
 
     def plot_false_positive(self, n_sample: Optional[int] = None):
-        self._plot_class(NON_UFO_LABEL_ARGMAX, UFO_LABEL_ARGMAX, n_sample=n_sample)
+        self._plot_class(NON_UFO_LABEL, UFO_LABEL, n_sample=n_sample)
 
     def plot_false_negative(self, n_sample: Optional[int] = None):
-        self._plot_class(UFO_LABEL_ARGMAX, NON_UFO_LABEL_ARGMAX, n_sample=n_sample)
+        self._plot_class(UFO_LABEL, NON_UFO_LABEL, n_sample=n_sample)
 
     def plot_rolling_window(
         self, lossmap: LossMap, rolling_pred: np.ndarray
     ) -> Tuple[plt.Figure, plt.Axes]:
         blm_dcum = lossmap.df["dcum"]
         #     plot_labels = (lm_pred.squeeze().argmax(axis=1) * 0.01) + 0.001
-        ufo_certainty = rolling_pred.squeeze()[:, 0]
+        ufo_certainty = rolling_pred.squeeze()
         # non_ufo_certainty = rolling_pred.squeeze()[:, 1]
 
         fig, ax = plt.subplots(2, figsize=(16, 5), sharex=True)
@@ -146,5 +158,12 @@ class SupervisedModel:
         fig, ax = plt.subplots(1, 1)
         ax.plot(self.history["loss"], label="loss")
         ax.plot(self.history["val_loss"], label="val_loss")
+        ax.set_xlabel("Epoch")
         ax.legend()
+        if "lr" in self.history.keys():
+            ax2 = ax.twinx()
+            ax2.plot(self.history["lr"], c="r")
+            ax2.set_ylabel("Learning rate", c="r")
+            # store the new ax so that it is returned properly
+            ax = [ax, ax2]
         return fig, ax

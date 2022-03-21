@@ -12,10 +12,8 @@ from pylossmap import BLMData
 # from tensorflow.keras.utils import Sequence
 from tqdm.auto import tqdm
 
-UFO_LABEL = [1, 0]
-UFO_LABEL_ARGMAX = 0
-NON_UFO_LABEL = [0, 1]
-NON_UFO_LABEL_ARGMAX = 1
+UFO_LABEL = 1
+NON_UFO_LABEL = 0
 
 
 def augment_mirror(data: np.ndarray) -> np.ndarray:

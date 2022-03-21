@@ -8,7 +8,6 @@ from tensorflow.keras.models import Sequential
 
 def build_model_window(
     vector_length: int = 33,
-    n_classes: int = 2,
     kernel_sizes: List[int] = [3, 3],
     maxpool_sizes: List[Optional[int]] = [3, 5],
 ):
@@ -68,6 +67,7 @@ def build_model_window(
             model.add(layers.Activation(activation_conv))
             if maxpool_size is not None:
                 model.add(layers.MaxPooling1D(maxpool_size))
+            model.add(layers.Dropout(hp.Float("dropout", min_value=0, max_value=0.5)))
 
         model.add(
             layers.Dense(
@@ -75,12 +75,12 @@ def build_model_window(
                 activation=activation_dense,
             )
         )
-        model.add(layers.Dropout(hp.Float("dropout", min_value=0, max_value=0.5)))
-        model.add(layers.Dense(n_classes, activation="softmax"))
+        model.add(layers.Dense(1, activation="sigmoid"))
+        # model.add(layers.Flatten())
 
         model.summary()
         model.compile(
-            optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"]
+            optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"]
         )
         return model
 
@@ -89,7 +89,6 @@ def build_model_window(
 
 def build_model_full_lm(
     vector_length: int = 3595,
-    n_classes: int = 2,
     kernel_sizes: List[int] = [64, 32, 16],
     strides: List[int] = [16, 12, 8],
     maxpool_sizes: List[Optional[int]] = [None, None, None],
@@ -154,15 +153,15 @@ def build_model_full_lm(
             model.add(layers.Activation(activation_conv))
             if maxpool_size is not None:
                 model.add(layers.MaxPooling1D(maxpool_size))
+            model.add(layers.Dropout(hp.Float("dropout", min_value=0, max_value=0.5)))
         output_dense_units = hp.Int("output_dense", min_value=4, max_value=32, step=4)
 
         model.add(layers.Dense(units=output_dense_units, activation=activation_dense))
-        model.add(layers.Dropout(hp.Float("dropout", min_value=0, max_value=0.5)))
-        model.add(layers.Dense(n_classes, activation="softmax"))
+        model.add(layers.Dense(1, activation="sigmoid"))
 
         model.summary()
         model.compile(
-            optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"]
+            optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"]
         )
         return model
 
