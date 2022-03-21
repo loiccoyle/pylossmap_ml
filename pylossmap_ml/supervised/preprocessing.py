@@ -237,43 +237,64 @@ def create_rolling_window_dataset(
             )
 
             try:
-                ufo_rolling_ufo = ufo_rolling[
-                    ufo_lm.df.index.get_loc(ufo.blm)
-                    - half_window : ufo_lm.df.index.get_loc(ufo.blm)
-                    + half_window
-                    + 1
-                ]
-
-                ufo_rolling_non_ufo = np.vstack(
-                    [
-                        ufo_rolling[
-                            : ufo_lm.df.index.get_loc(ufo.blm)
-                            - half_window
-                            - safety_gap
-                        ],
-                        ufo_rolling[
-                            ufo_lm.df.index.get_loc(ufo.blm)
-                            + half_window
-                            + safety_gap
-                            + 1 :
-                        ],
-                    ]
+                ufo_indices = range(
+                    ufo_lm.df.index.get_loc(ufo.blm) - half_window,
+                    ufo_lm.df.index.get_loc(ufo.blm) + half_window + 1,
                 )
+                # ufo_rolling_ufo = ufo_rolling[
+                #     ufo_lm.df.index.get_loc(ufo.blm)
+                #     - half_window : ufo_lm.df.index.get_loc(ufo.blm)
+                #     + half_window
+                #     + 1
+                # ]
+                ufo_rolling_ufo = ufo_rolling[ufo_indices]
+
+                non_ufo_indices = list(
+                    range(
+                        0, ufo_lm.df.index.get_loc(ufo.blm) - half_window - safety_gap
+                    )
+                ) + list(
+                    range(
+                        ufo_lm.df.index.get_loc(ufo.blm) + half_window + safety_gap + 1,
+                        len(ufo_rolling),
+                    )
+                )
+                # ufo_rolling_non_ufo = np.vstack(
+                #     [
+                #         ufo_rolling[
+                #             : ufo_lm.df.index.get_loc(ufo.blm)
+                #             - half_window
+                #             - safety_gap
+                #         ],
+                #         ufo_rolling[
+                #             ufo_lm.df.index.get_loc(ufo.blm)
+                #             + half_window
+                #             + safety_gap
+                #             + 1 :
+                #         ],
+                #     ]
+                # )
+                ufo_rolling_non_ufo = ufo_rolling[non_ufo_indices]
             except KeyError:
                 continue
 
             rolling_ufo_dataset.append(ufo_rolling_ufo)
             rolling_non_ufo_dataset.append(ufo_rolling_non_ufo)
             if include_meta:
-                rolling_ufo_meta.extend([ufo] * len(ufo_rolling_ufo))
-                rolling_non_ufo_meta.extend([ufo] * len(ufo_rolling_non_ufo))
+                ufo_meta = pd.DataFrame([ufo] * len(ufo_rolling_ufo))
+                ufo_meta["rolling_index"] = ufo_indices
+                rolling_ufo_meta.append(ufo_meta)
+
+                non_ufo_meta = pd.DataFrame([ufo] * len(ufo_rolling_non_ufo))
+                non_ufo_meta["rolling_index"] = non_ufo_indices
+                rolling_non_ufo_meta.append(non_ufo_meta)
     out = {
         "ufo": np.vstack(rolling_ufo_dataset),
         "non_ufo": np.vstack(rolling_non_ufo_dataset),
     }
     if include_meta:
-        out["ufo_meta"] = pd.DataFrame(rolling_ufo_meta)
-        out["non_ufo_meta"] = pd.DataFrame(rolling_non_ufo_meta)
+        out["ufo_meta"] = pd.concat(rolling_ufo_meta)
+        out["non_ufo_meta"] = pd.concat(rolling_non_ufo_meta)
     return out
 
 
