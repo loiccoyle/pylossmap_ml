@@ -70,6 +70,10 @@ class BasePreprocessor:
         # with open(path_to_hdf.with_suffix('.csv'), 'r') as fp:
         #     columns = fp.readlines()
         data.columns = [c.rstrip() for c in header]
+        data_blms = data.columns.to_list()
+        sorted_blms = meta["dcum"].loc[data_blms].sort_values().index.to_list()
+        print(sorted_blms[:5])
+        data = data[sorted_blms]
         return data, meta
 
 

@@ -1,7 +1,7 @@
 import json
 import logging
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -14,13 +14,81 @@ from . import metadata
 from .preprocessing import NON_UFO_LABEL, UFO_LABEL, DataGenerator, rolling_window
 
 
-class SupervisedModel:
+class SupervisedModelRegression:
     def __init__(self, model_path: Path, generator_path: Path, raw_data_dir: Path):
         self.model_path = model_path
         self.generator_path = generator_path
         self.raw_data_dir = raw_data_dir
         self.model = load_model(self.model_path)
         self.generator = DataGenerator.load(self.generator_path)
+        with open(model_path / "history.json") as fp:
+            self.history = json.load(fp)
+        self._pred = None
+        self._log = logging.getLogger(__name__)
+
+    @property
+    def pred(self) -> np.ndarray:
+        if self._pred is None:
+            self._pred = self.model.predict(self.generator.data)
+        return self._pred
+
+    def pred_rolling_window(
+        self, meta: pd.Series, window_size: Optional[int] = None
+    ) -> Tuple[LossMap, np.ndarray]:
+        """Load a loss map, roll a window across it, predict on every window.
+
+        Args:
+            meta: the loss map's metadata
+            window_size: the size of the rolling window
+
+        Returns:
+            The loss map data and the model's prediction across the windows.
+        """
+        if window_size is None:
+            window_size = self.generator.data.shape[1]
+        raw_data = metadata.load_raw_fill(self.raw_data_dir / f"{meta.fill}.h5")
+        lm_data = raw_data.loss_map(meta.datetime + pd.Timedelta("1s"))
+        lm_data_np = lm_data["data"].df.to_numpy()
+        lm_data_np = rolling_window(
+            np.pad(lm_data_np, int((window_size - 1) / 2), mode="wrap"), window_size
+        )
+        self._log.debug("post rolling shape: %s", lm_data_np.shape)
+        lm_data_np = self.generator._pre_norm(lm_data_np)
+        lm_data_np = self.generator._norm_func(lm_data_np)
+        lm_data_np = self.generator._expand(lm_data_np)
+        return lm_data, self.model.predict(lm_data_np)
+
+    def plot_history(self) -> Tuple[plt.Figure, plt.Axes]:
+        """Plot the training history."""
+        fig, ax = plt.subplots(1, 1)
+        ax.plot(self.history["loss"], label="loss")
+        ax.plot(self.history["val_loss"], label="val_loss")
+        ax.set_xlabel("Epoch")
+        ax.legend()
+        if "lr" in self.history.keys():
+            ax2 = ax.twinx()
+            ax2.plot(self.history["lr"], c="r")
+            ax2.set_ylabel("Learning rate", c="r")
+            # store the new ax so that it is returned properly
+            ax = [ax, ax2]
+        return fig, ax
+
+
+class SupervisedModel:
+    def __init__(
+        self,
+        model_path: Path,
+        generator: Union[Path, DataGenerator],
+        raw_data_dir: Path,
+    ):
+        self.model_path = model_path
+        # self.generator_path = generator_path
+        self.raw_data_dir = raw_data_dir
+        self.model = load_model(self.model_path)
+        if isinstance(generator, Path):
+            self.generator = DataGenerator.load(self.generator)
+        else:
+            self.generator = generator
         with open(model_path / "history.json") as fp:
             self.history = json.load(fp)
         self._pred = None
@@ -42,6 +110,7 @@ class SupervisedModel:
     def select(
         self, true_class: int, pred_class: int
     ) -> Tuple[np.ndarray, pd.DataFrame]:
+        """Select data & meta based on the true and predicted classes."""
         labels_am = self.generator.labels.squeeze().round()
         pred_am = self.pred.squeeze().round()
 

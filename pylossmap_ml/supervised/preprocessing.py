@@ -16,6 +16,10 @@ UFO_LABEL = 1
 NON_UFO_LABEL = 0
 
 
+def mirror(data: np.ndarray) -> np.ndarray:
+    return data.copy()[:, ::-1]
+
+
 def augment_mirror(data: np.ndarray) -> np.ndarray:
     """Augment the data with the mirrored data.
 
@@ -191,12 +195,120 @@ def rolling_window(a: np.ndarray, window: int) -> np.ndarray:
     return np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides)
 
 
-def create_rolling_window_dataset(
+def create_variable_labels(ufo_mask: np.ndarray, window_size: int) -> np.ndarray:
+    """Take an array representing the ufo mask, i.e. an array full of zeros with
+    ones at ufo locations and compute a the convolution with a triangular window.
+
+    Args:
+        ufo_mask: mask array with ones at ufo locations
+        window_size: the size of the convolution window
+
+    Returns:
+        The mask array convolved with a triangular window.
+    """
+    half_window = int((window_size - 1) / 2)
+    triangle_window = np.linspace(0, 1, half_window + 1)
+    triangle_window = np.hstack(
+        [triangle_window, np.linspace(triangle_window[-2], 0, half_window)]
+    )
+    if len(triangle_window) != window_size:
+        print(len(triangle_window))
+        print(window_size)
+        raise ValueError("Window length mismatch.")
+    return np.convolve(
+        np.pad(ufo_mask, half_window, mode="wrap"), triangle_window, mode="valid"
+    )
+
+
+def create_rolling_window_dataset_with_regression_labels(
     ufo_meta: pd.DataFrame,
     raw_data_dir: Path,
     window_size: int,
-    safety_gap: int,
-    include_meta: bool = True,
+    norm_factors_min: Optional[pd.DataFrame] = None,
+    norm_factors_max: Optional[pd.DataFrame] = None,
+    norm_factors_mean: Optional[np.ndarray] = None,
+    norm_factors_std: Optional[np.ndarray] = None,
+) -> Dict[str, np.ndarray]:
+    """Create a ufo non ufo dataset with rolling windows.
+
+    Args:
+        ufo_meta: metadata of the ufo events
+        raw_data_dir: directory containing the raw data
+        window_size: the size of the rolling window
+
+    Returns:
+        A dictionary with the data, metadata and labels.
+    """
+    half_window = int((window_size - 1) / 2)
+    dataset = []
+    dataset_labels = []
+    metadata = []
+    for fill, grp in tqdm(ufo_meta.groupby("fill")):
+        try:
+            raw_fill_data = BLMData.load(raw_data_dir / f"{fill}.h5")
+            raw_fill_data.df = raw_fill_data.df.droplevel("mode")
+            raw_fill_data.df = raw_fill_data.df.iloc[
+                ~raw_fill_data.df.index.duplicated()
+            ]
+            if norm_factors_max is not None and norm_factors_min is not None:
+                raw_fill_data.df = raw_fill_data.df.subtract(
+                    norm_factors_min, axis="columns"
+                )
+                raw_fill_data.df = raw_fill_data.df.div(
+                    norm_factors_max - norm_factors_min, axis="columns"
+                )
+                print(raw_fill_data.df.max(axis=0))
+                print(raw_fill_data.df.min(axis=0))
+            elif norm_factors_mean is not None and norm_factors_std is not None:
+                raw_fill_data.df = raw_fill_data.df.subtract(
+                    norm_factors_mean, axis="columns"
+                )
+                raw_fill_data.df = raw_fill_data.df.div(
+                    norm_factors_std, axis="columns"
+                )
+                print(raw_fill_data.df.mean(axis=0))
+                print(raw_fill_data.df.std(axis=0))
+
+        except Exception as e:
+            print(f"file error {fill}, skipping {e}")
+            continue
+
+        for _, ufo in grp.iterrows():
+            print(ufo.blm, ufo.dcum)
+
+            # raw_idx = raw_fill_data.df.index.get_loc(ufo.datetime, method="nearest") + 1
+            ufo_lm = raw_fill_data.loss_map(ufo.datetime + pd.Timedelta("1s"))
+            ufo_np = ufo_lm.df["data"].to_numpy()
+            ufo_rolling = rolling_window(
+                np.pad(ufo_np, half_window, mode="wrap"), window_size
+            )
+
+            try:
+                ufo_index = ufo_lm.df.index.get_loc(ufo.blm)
+                ufo_mask = np.zeros(ufo_rolling.shape[0])
+                ufo_mask[ufo_index] = 1
+                labels = create_variable_labels(ufo_mask.copy(), window_size)
+                meta = pd.DataFrame([ufo] * len(ufo_rolling))
+                meta["labels"] = labels
+                meta["ufo_buster_mask"] = ufo_mask
+
+                dataset.append(ufo_rolling)
+                dataset_labels.append(labels)
+                metadata.append(meta)
+            except KeyError:
+                continue
+    out = {
+        "data": np.vstack(dataset),
+        "labels": np.hstack(dataset_labels),
+        "metadata": pd.concat(metadata),
+    }
+    return out
+
+
+def create_rolling_window_dataset_with_labels(
+    ufo_meta: pd.DataFrame,
+    raw_data_dir: Path,
+    window_size: int,
 ) -> Dict[str, np.ndarray]:
     """Create a ufo non ufo dataset with rolling windows.
 
@@ -211,10 +323,10 @@ def create_rolling_window_dataset(
         A dictionary with the windows containing the ufos and the windows which don't.
     """
     half_window = int((window_size - 1) / 2)
-    rolling_ufo_dataset = []
-    rolling_ufo_meta = []
-    rolling_non_ufo_dataset = []
-    rolling_non_ufo_meta = []
+    dataset = []
+    dataset_labels = []
+    metadata = []
+
     for fill, grp in tqdm(ufo_meta.groupby("fill")):
         try:
             raw_fill_data = BLMData.load(raw_data_dir / f"{fill}.h5")
@@ -237,64 +349,31 @@ def create_rolling_window_dataset(
             )
 
             try:
+                ufo_index = ufo_lm.df.index.get_loc(ufo.blm)
+                ufo_mask = np.zeros(ufo_rolling.shape[0])
                 ufo_indices = range(
-                    ufo_lm.df.index.get_loc(ufo.blm) - half_window,
-                    ufo_lm.df.index.get_loc(ufo.blm) + half_window + 1,
+                    ufo_index - half_window,
+                    ufo_index + half_window + 1,
                 )
-                # ufo_rolling_ufo = ufo_rolling[
-                #     ufo_lm.df.index.get_loc(ufo.blm)
-                #     - half_window : ufo_lm.df.index.get_loc(ufo.blm)
-                #     + half_window
-                #     + 1
-                # ]
-                ufo_rolling_ufo = ufo_rolling[ufo_indices]
+                ufo_mask[ufo_index] = 1
 
-                non_ufo_indices = list(
-                    range(
-                        0, ufo_lm.df.index.get_loc(ufo.blm) - half_window - safety_gap
-                    )
-                ) + list(
-                    range(
-                        ufo_lm.df.index.get_loc(ufo.blm) + half_window + safety_gap + 1,
-                        len(ufo_rolling),
-                    )
-                )
-                # ufo_rolling_non_ufo = np.vstack(
-                #     [
-                #         ufo_rolling[
-                #             : ufo_lm.df.index.get_loc(ufo.blm)
-                #             - half_window
-                #             - safety_gap
-                #         ],
-                #         ufo_rolling[
-                #             ufo_lm.df.index.get_loc(ufo.blm)
-                #             + half_window
-                #             + safety_gap
-                #             + 1 :
-                #         ],
-                #     ]
-                # )
-                ufo_rolling_non_ufo = ufo_rolling[non_ufo_indices]
+                labels = ufo_mask.copy()
+                labels[ufo_indices] = 1
+                meta = pd.DataFrame([ufo] * len(ufo_rolling))
+                meta["labels"] = labels
+                meta["ufo_buster_mask"] = ufo_mask
+
+                dataset.append(ufo_rolling)
+                dataset_labels.append(labels)
+                metadata.append(meta)
+
             except KeyError:
                 continue
-
-            rolling_ufo_dataset.append(ufo_rolling_ufo)
-            rolling_non_ufo_dataset.append(ufo_rolling_non_ufo)
-            if include_meta:
-                ufo_meta = pd.DataFrame([ufo] * len(ufo_rolling_ufo))
-                ufo_meta["rolling_index"] = ufo_indices
-                rolling_ufo_meta.append(ufo_meta)
-
-                non_ufo_meta = pd.DataFrame([ufo] * len(ufo_rolling_non_ufo))
-                non_ufo_meta["rolling_index"] = non_ufo_indices
-                rolling_non_ufo_meta.append(non_ufo_meta)
     out = {
-        "ufo": np.vstack(rolling_ufo_dataset),
-        "non_ufo": np.vstack(rolling_non_ufo_dataset),
+        "data": np.vstack(dataset),
+        "labels": np.hstack(dataset_labels),
+        "metadata": pd.concat(metadata),
     }
-    if include_meta:
-        out["ufo_meta"] = pd.concat(rolling_ufo_meta)
-        out["non_ufo_meta"] = pd.concat(rolling_non_ufo_meta)
     return out
 
 
@@ -431,6 +510,7 @@ class DataGenerator:
         norm_methods = {
             "min_max": (self.norm_min_max, self.unnorm_min_max),
             "znorm": (self.norm_znorm, self.unnorm_znorm),
+            "none": (lambda x: x, lambda x: x),
         }
         self._norm_func, self._unnorm_func = norm_methods[self.norm_method]
         self._norm_factors = None

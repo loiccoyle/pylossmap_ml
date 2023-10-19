@@ -158,8 +158,9 @@ class SerialH5(BaseSpooler):
     def concat(self, concat_path: Path, key: str = "data", **kwargs) -> None:
         for h5_file in tqdm(list(self.output.glob("*.h5"))):
             # TODO: check is I need to specify the compression here or does pandas figure it out?
-            data = pd.read_hdf(h5_file, key, **kwargs)
+            print(h5_file)
             try:
+                data = pd.read_hdf(h5_file, key, **kwargs)
                 data.to_hdf(concat_path, key, format="table", append=True, **kwargs)
                 self._log.info("DONE %s", h5_file)
             except Exception as exc:

@@ -25,7 +25,8 @@ class DataGenerator(Sequence):
         with open(parameter_file, "r") as fp:
             param_dict = json.load(fp)
         param_dict["data_file"] = Path(param_dict["data_file"])
-        param_dict["BLM_dcum"] = pd.Series(param_dict["BLM_dcum"])
+        if param_dict["BLM_dcum"] is not None:
+            param_dict["BLM_dcum"] = pd.Series(param_dict["BLM_dcum"])
         if param_dict["indices"] is not None:
             param_dict["indices"] = np.array(param_dict["indices"])
         return cls(**param_dict)
@@ -45,6 +46,7 @@ class DataGenerator(Sequence):
         return_dataframe: bool = False,
         ndim: int = 3,
         indices: Optional[np.ndarray] = None,
+        pad_wrap: Optional[List[int]] = None,
     ):
         """Lossmap data hdf5 data generator.
 
@@ -64,6 +66,7 @@ class DataGenerator(Sequence):
             return_dataframe: Return `pd.DataFrame`s.
             ndim: expand the number of dimension in the numpy array.
             indices: the indices of the samples to load from the data file.
+            pad_wrap: pad the blm data with the wrapped BLM signals.
         """
         self._log = logging.getLogger(__name__)
 
@@ -89,11 +92,14 @@ class DataGenerator(Sequence):
                 self._log.debug("Shuffling indices, seed %s", self.seed)
                 self._rng.shuffle(indices)
         self.indices = indices  # type: np.ndarray
+        self.pad_wrap = pad_wrap
+        if self.pad_wrap is not None and self.return_dataframe:
+            raise ValueError("Can only pad wrap data if 'return_dataframe' is False.")
 
         self._mins_maxes = None
         self._blm_sorted = None
         # self._indices = np.arange(self._data_len)
-        norm_methods = {"min_max": self.norm_min_max}
+        norm_methods = {"min_max": self.norm_min_max, "znorm": self.norm_znorm}
         self._norm_func = norm_methods[self.norm_method]
 
     def _compute_min_max(self) -> Tuple[np.ndarray, np.ndarray]:
@@ -104,26 +110,27 @@ class DataGenerator(Sequence):
         """
         mins = []
         maxes = []
-        for chunk in tqdm(
-            self.store.select(self.key, chunksize=self.batch_size, iterator=True),
-            total=int(self._data_len // self.batch_size),
-            desc=f"Computing mins & maxes, axis={self.norm_axis}",
-        ):
+        with pd.HDFStore(self.data_file) as store:
+            for chunk in tqdm(
+                store.select(self.key, chunksize=self.batch_size, iterator=True),
+                total=int(self._data_len // self.batch_size),
+                desc=f"Computing mins & maxes, axis={self.norm_axis}",
+            ):
 
-            maxes.append(chunk.max(axis=self.norm_axis))
-            mins.append(chunk.min(axis=self.norm_axis))
+                maxes.append(chunk.max(axis=self.norm_axis))
+                mins.append(chunk.min(axis=self.norm_axis))
 
         return (
             pd.concat(mins, axis=1).min(axis=1).to_numpy(),
             pd.concat(maxes, axis=1).max(axis=1).to_numpy(),
         )
 
-    @property
-    def store(self) -> pd.HDFStore:
-        if self._store is None:
-            self._log.debug("Opening hdf file.")
-            self._store = pd.HDFStore(self.data_file, "r")
-        return self._store
+    # @property
+    # def store(self) -> pd.HDFStore:
+    #     if self._store is None:
+    #         self._log.debug("Opening hdf file.")
+    #         self._store = pd.HDFStore(self.data_file, "r")
+    #     return self._store
 
     @property
     def mins_maxes(self) -> Tuple[np.ndarray, np.ndarray]:
@@ -162,9 +169,14 @@ class DataGenerator(Sequence):
 
         # compute the mins & maxes across the entire dataset
         generator_split = DataGenerator(**split_params)
-        generator_split._mins_maxes = self.mins_maxes
         generator_remaining = DataGenerator(**remaining_params)
-        generator_remaining._mins_maxes = self.mins_maxes
+        if self.norm_axis == 0:
+            self._log.debug("providing split with mins_maxes")
+            generator_split._mins_maxes = self.mins_maxes
+            self._log.debug("providing split with mins_maxes")
+            generator_remaining._mins_maxes = self.mins_maxes
+            self._log.debug("done split")
+
         return generator_split, generator_remaining
 
     def get_metadata(self, entire_data_file: bool = False, **kwargs) -> np.ndarray:
@@ -178,18 +190,22 @@ class DataGenerator(Sequence):
         Returns:
             A numpy array containing the metadata of the dataset.
         """
-        chunks = [
-            chunk.index.to_numpy()
-            for chunk in self.store.select(
-                self.key, columns=[0], chunksize=min(int(1e6), self._data_len), **kwargs
-            )
-        ]
+        with pd.HDFStore(self.data_file) as store:
+            chunks = [
+                chunk.index.to_numpy()
+                for chunk in store.select(
+                    self.key,
+                    columns=[0],
+                    chunksize=min(int(1e6), self._data_len),
+                    **kwargs,
+                )
+            ]
         chunks = np.hstack(chunks)
         if not entire_data_file:
             chunks = chunks[self.indices]
         return chunks
 
-    def norm_min_max(self, data: np.ndarray) -> np.ndarray:
+    def norm_min_max(self, data: pd.DataFrame) -> pd.DataFrame:
         """Normalize by setting the minimum to 0 and the maximum to 1.
 
         Args:
@@ -198,13 +214,37 @@ class DataGenerator(Sequence):
         Returns:
             The normalized data.
         """
-        mins, maxes = self.mins_maxes
+        if self.norm_axis == 0:
+            mins, maxes = self.mins_maxes
+            data -= mins
+            data /= maxes - mins
+        else:
+            mins, maxes = np.min(data, axis=1), np.max(data, axis=1)
+            data = data.subtract(mins, axis="index")
+            data = data.divide(maxes - mins, axis="index")
         self._log.debug("mins, maxes shape: %s, %s", mins.shape, maxes.shape)
-        data -= mins
-        data /= maxes - mins
         return data
 
-    def normalize(self, data: np.ndarray) -> np.ndarray:
+    def norm_znorm(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Normalize by setting the mean to 0 and the standard deviation to 1.
+
+        Args:
+            data: the data to normalize.
+
+        Returns:
+            The normalized data.
+        """
+        if self.norm_axis == 0:
+            raise ValueError("'norm_axis' can't be 0 with norm_method='znorm'")
+        else:
+            # means, stds = data.mean(axis=1), data.std(axis=1)
+            means, stds = np.mean(data, axis=1), np.std(data, axis=1)
+            data = data.subtract(means, axis="index")
+            data = data.divide(stds, axis="index")
+        self._log.debug("means, stds shape: %s, %s", means.shape, stds.shape)
+        return data
+
+    def normalize(self, data: pd.DataFrame) -> pd.DataFrame:
         """Run the chosen normalization method.
 
         Args:
@@ -224,7 +264,8 @@ class DataGenerator(Sequence):
         Raises:
             ValueError: when the number of rows could not be determined.
         """
-        out = self.store.get_storer(self.key).nrows
+        with pd.HDFStore(self.data_file) as store:
+            out = store.get_storer(self.key).nrows
         if out is None:
             raise ValueError("Could not determine the dataset length. Is is empty ?")
         return out
@@ -238,6 +279,7 @@ class DataGenerator(Sequence):
         Returns:
             The data with columns sorted by dcum.
         """
+        print(self.BLM_dcum)
         if self.BLM_dcum is not None:
             if self._blm_sorted is None:
                 self._log.debug("Computing blm_sorted.")
@@ -285,6 +327,7 @@ class DataGenerator(Sequence):
             return_dataframe=self.return_dataframe,
             ndim=self.ndim,
             indices=self.indices,
+            pad_wrap=self.pad_wrap,
         )
 
     def to_json(self, file_path: Optional[Path] = None) -> str:
@@ -299,9 +342,11 @@ class DataGenerator(Sequence):
         dump_kwargs = {"indent": 2}
         param_dict = self.to_dict()
         param_dict["data_file"] = str(param_dict["data_file"].resolve())
-        param_dict["BLM_dcum"] = param_dict["BLM_dcum"].to_dict()
+        if param_dict["BLM_dcum"] is not None:
+            param_dict["BLM_dcum"] = param_dict["BLM_dcum"].to_dict()
         if param_dict["indices"] is not None:
             param_dict["indices"] = param_dict["indices"].tolist()
+
         if file_path is not None:
             with open(file_path, "w") as fp:
                 json.dump(param_dict, fp, **dump_kwargs)
@@ -309,14 +354,23 @@ class DataGenerator(Sequence):
 
     def __getitem__(self, index: int) -> Tuple[np.ndarray, np.ndarray]:
         subset = self._create_subset(index)
-        subset_data = self.store.select(self.key, where=subset)
-        self._log.debug("Subset shape: %s", subset_data.shape)
-        subset_data = self.normalize(subset_data)
+        with pd.HDFStore(self.data_file, "r") as store:
+            subset_data = store.select(self.key, where=subset)
 
+        self._log.debug("Subset shape: %s", subset_data.shape)
         if self.BLM_names is not None:
             self._log.info("Assigning BLM names.")
             subset_data.columns = self.BLM_names
         subset_data = self.reorder_blms(subset_data)
+
+        if self.pad_wrap is not None:
+            padding_amounts = [(0, 0)] * subset_data.ndim
+            padding_amounts[1] = self.pad_wrap
+            subset_data = np.pad(subset_data, padding_amounts, mode="wrap")
+            subset_data = pd.DataFrame(subset_data)
+            self._log.info("Padded data to: %s", subset_data.shape)
+
+        subset_data = self.normalize(subset_data)
 
         if not self.return_dataframe:
             self._log.info("Converting to numpy array.")
@@ -326,6 +380,7 @@ class DataGenerator(Sequence):
             if n_expand > 0:
                 self._log.info("Expanding the dimensions by: %i", n_expand)
                 subset_data = subset_data[(..., *([np.newaxis] * n_expand))]
+
         return subset_data, subset_data
 
     def __len__(self) -> int:

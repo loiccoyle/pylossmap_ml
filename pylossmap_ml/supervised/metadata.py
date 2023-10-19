@@ -60,6 +60,10 @@ def get_ufo_data(ufo_meta: pd.DataFrame, raw_data_dir: Path) -> pd.DataFrame:
         print(idx, row.datetime, row.blm, row.fill)
         try:
             blm_data = load_raw_fill(raw_data_dir / f"{row.fill}.h5")
+            blm_data.df = blm_data.df.droplevel("mode")
+            blm_data.df = blm_data.df.iloc[
+                ~blm_data.df.index.duplicated()
+            ]
         except FileNotFoundError:
             print(f"file not found {row.fill}")
             continue

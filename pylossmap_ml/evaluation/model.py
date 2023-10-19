@@ -56,7 +56,7 @@ class AnomalyDetectionModel:
         raw_data_path: Optional[Path] = None,
         threshold: Optional[float] = None,
     ) -> None:
-        self.model_path = model_path
+        self.model_path = model_path.resolve()
         self.raw_data_path = raw_data_path
         self.threshold = threshold
         self._model = None
@@ -158,6 +158,7 @@ class AnomalyDetectionModel:
 
     def _chunk_predict_MSE(self, generator: DataGenerator) -> np.ndarray:
         """Iteratively compute the models prediction on the generator."""
+        logger.info("Computing MSE")
         MSE_chunks = []
         for chunk, _ in tqdm(generator):
             chunk_pred = self.model.predict(chunk)
@@ -166,6 +167,7 @@ class AnomalyDetectionModel:
         return np.vstack(MSE_chunks).squeeze()
 
     def _chunk_predict_MAE(self, generator: DataGenerator) -> np.ndarray:
+        logger.info("Computing MAE")
         MAE_chunks = []
         for chunk, _ in tqdm(generator):
             chunk_pred = self.model.predict(chunk)
